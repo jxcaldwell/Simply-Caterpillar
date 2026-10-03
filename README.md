@@ -1,148 +1,61 @@
-<div align="center">
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/simply-caterpillar-logo.png" alt="Simply Caterpillar Icon" width="403" />
-</div>
+# Simply Caterpillar (Paper plugin)
 
-<div align="center">
-	<a href="https://github.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar" target="_blank">Source code</a>
-    |
-   	<a href="https://github.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/issues" target="_blank">Issue tracker</a>
-</div>
+A caterpillar drill that digs a 3x3 tunnel for you, as a **server-side Paper plugin**. No Forge, no Fabric and
+no client mods: players join with a vanilla client.
 
-<div align="center">
-    <a href="https://www.curseforge.com/minecraft/mc-mods/simply-caterpillar" target="_blank">
-        <img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/curseforge-badge.png" alt="CurseForge download link" />
-    </a>
-    <a href="https://modrinth.com/mod/simply-caterpillar" target="_blank">
-        <img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/modrinth-badge.png" alt="modrinth download link" />
-    </a>
-</div>
+This is a port of the Forge mod [Simply Caterpillar](https://github.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar)
+(credits: The_Fireplace and Daniel-Mendes, and Daniel Appleby for the original Caterpillar mod; MIT licensed).
+The original Forge 1.20.1 sources are kept for reference in [`legacy/forge-1.20.1`](legacy/forge-1.20.1) and the
+original models and textures in [`resourcepack`](resourcepack) for a later resource-pack milestone.
 
----
+**Target:** Paper 26.2, Java 25.
 
-<div align="center">
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/simply-caterpillar-wallpaper-blender.png" alt="Simply Caterpillar Wallpaper" />
-</div>
+## Status: milestone 1
 
-**Simply Caterpillar** adds a drill that makes 3x3 mineshaft for you.
+| Part | Status |
+|---|---|
+| Drill head, basic drill segment, fuel, power button, drilling, movement | done (this milestone) |
+| Storage, item collector, incinerator, drill seat | planned (milestone 2) |
+| Transporter | planned (milestone 3) |
+| Reinforcement builder, decoration placer | planned (milestone 4) |
+| Optional resource pack with the original models | planned (milestone 5) |
 
-## Features
+## How to play
 
-You can add or not add any part to customize your drill.   
+1. Craft a **Basic Drill Segment** (`c c / crc / cpc`: cobblestone, redstone, any planks) and a **Drill Head**
+   (`iii / ·d· / ·f·`: iron ingots, a drill segment, a furnace). Admins can use `/caterpillar give <part>`.
+2. Place the **Drill Head** on the ground: it builds a 3x3 cutting face with the base block behind it, facing the way
+   you are looking.
+3. Place **Basic Drill Segments** in a line directly behind the head to lengthen the caterpillar.
+4. Right-click any part of the caterpillar to open the head's GUI. Put fuel in the second slot of the top row and
+   click the power button.
 
->⚠️ Longer the caterpillar is, more fuel it will consume.
+While powered the drill burns fuel (one unit per tick per part: the longer the caterpillar, the hungrier it is),
+breaks the 3x3 area in front of it every 3 seconds, steps forward, and the segments follow one by one.
+Breaking a part of the caterpillar takes the whole thing apart and returns the parts and stored items.
 
-<details>
-	<summary>
-		<h3>Basic Drill Segment</h3>
-		<p>This is the drill base, it's used for all parts.</p>
-	</summary>
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-drill_base.png" alt="Basic Drill Segment Recipe" />
-</details>
+## Server notes
 
-<details>
-	<summary>
-		<h3>Drill Head</h3>
-		<p>This is the main part of the drill, it's used to drill and has the inventory for the drill.</p>
-	</summary>
-	<h4>Screen</h4>
-	<p>It has 18 slots of storage built in, and a fuel slot. Power can be toggled in the gui, and fuel consumption will pause when the caterpillar is turned off.</p>
-<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-drill_head.png" alt="Drill head screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-drill_head.png" alt="Drill Head Recipe" />
-</details>
+* Every block the drill breaks is checked against protection plugins as the caterpillar's owner (the player who
+  placed the head), by firing a normal `BlockBreakEvent`; placement fires `BlockPlaceEvent`. A denial stops the drill.
+* A caterpillar only works while its owner is online and its chunks are loaded; otherwise it pauses.
+* Caterpillar blocks are immune to explosions and pistons (configurable).
+* Data is stored in `plugins/SimplyCaterpillar/caterpillars.yml`.
 
-<details>
-    <summary>
-        <h3>Drill Seat</h3>
-        <p>This is the part that allows you to ride the drill.</p>
-    </summary>
-    <h4>Recipe</h4>
-    <img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-drill_seat.png" alt="Drill Seat Recipe" />
-</details>
+### Commands and permissions
 
-<details>
-	<summary>
-		<h3>Item Collector</h3>
-		<p>Collects fallen items as it moves, and puts them in the caterpillar's inventory. Pretty useful if you don't want to manually pick up all blocks the drill breaks.</p>
-	</summary>
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-collector.png" alt="Item Collector Recipe" />
-</details>
+| | |
+|---|---|
+| `/caterpillar give <part> [player] [amount]`, `reload`, `list` | `simplycaterpillar.admin` (default: op) |
+| `simplycaterpillar.place`, `.use`, `.craft` | default: everyone |
+| `simplycaterpillar.admin` also lets you open and break other players' caterpillars | |
 
-<details>
-	<summary>
-		<h3>Decoration Placer</h3>
-		<p>Builds the inside of the mineshaft.</p>
-	</summary>
-	<h4>Screen</h4>
-	<p>This is where you edit the decorations to be placed. By default, it places them similarly to the vanilla mineshafts.</p>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-decoration.png" alt="Decoration Placer Screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-decoration.png" alt="Decoration Placer Recipe" />
-</details>
+## Building
 
-<details>
-	<summary>
-		<h3>Reinforcement Builder</h3>
-		<p>Replaces gravel/sand, lava, water, and air in the square surrounding the mineshaft with the block of your choice.</p>
-	</summary>
-	<h4>Screen</h4>
-		<p>Edit the blocks used to reinforce the walls here and what gets replaced, so you can keep water, lava, sand, gravel, etc. out of your mineshaft, or build yourself a floor to walk on, and walls and a ceiling if you wish.</p>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-reinforcement.png" alt="Reinforcement Builder Screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-reinforcement.png" alt="Reinforcement Builder Recipe" />
-</details>
+Requires JDK 25. `./gradlew build` produces `build/libs/SimplyCaterpillar-<version>.jar`; copy it into the server's
+`plugins` folder. The machine logic (`dev.the_fireplace.caterpillar.core`) has no Bukkit dependency and is covered
+by unit tests that run it against an in-memory world.
 
-<details>
-	<summary>
-		<h3>Incinerator</h3>
-		<p>This allows you to destroy anything the caterpillar mines that you don't want, and save inventory space for what matters.</p>
-	</summary>
-	<h4>Screen</h4>
-	<p>Set anything you don't want to keep to be incinerated here.</p>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-incinerator.png" alt="Incinerator Screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-incinerator.png" alt="Incinerator Recipe" />
-</details>
+## License
 
-<details>
-	<summary>
-		<h3>Drill Storage</h3>
-		<p>Adds 18 more slots to the drill head's inventory.</p>
-	</summary>
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-storage.png" alt="Drill Storage Recipe" />
-</details>
-
-<details>
-	<summary>
-		<h3>Transporter</h3>
-		<p>Takes the gathered inventory items and puts them inside the minecart with chest, and releases it when it is full.</p>
-	</summary>
-    <h4>Screen</h4>
-    <p>Put any item inside the minecart with chest.</p>
-<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-transporter.png" alt="Transporter Screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-transporter.png" alt="Transporter Recipe" />
-</details>
-
-<details>
-	<summary>
-		<h3>Pattern Book</h3>
-		<p>Transfer patterns between decoration blocks.</p>
-	</summary>
-    <h4>Screen</h4>
-    <p>Preview pattern and give it a name.</p>
-<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/screen-pattern_book.png" alt="Pattern Book Screen" width="480" />
-	<h4>Recipe</h4>
-	<img src="https://raw.githubusercontent.com/The-Fireplace-Minecraft-Mods/Simply-Caterpillar/1.20.1-forge/.github/sources/recipe-pattern_book.png" alt="Pattern Book Recipe" />
-</details>
-
-## Credits
-
-- Daniel-Mendes currently maintains the mod.
-- The_Fireplace ([Twitter](https://twitter.com/The_FireplaceMC) | [CurseForge](https://curseforge.com/members/the_fireplace/projects)) previously maintained the mod.
-- [Caterpillar mod by freethemice](https://www.curseforge.com/minecraft/mc-mods/caterpillar) for the original idea.
-- [Patchouli mod by Vazkii](https://www.curseforge.com/minecraft/mc-mods/patchouli) for the book texture.
-- Reijvi ([Twitter](https://twitter.com/Reijvii) | [CurseForge](https://curseforge.com/members/Reijvi/projects)) for the incinerator texture commissioned by Daniel-Mendes.
+MIT, see [LICENSE](LICENSE).

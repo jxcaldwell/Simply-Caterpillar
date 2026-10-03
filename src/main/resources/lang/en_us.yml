@@ -1,0 +1,59 @@
+# Messages use MiniMessage formatting: https://docs.advntr.dev/minimessage/format.html
+
+item:
+  drill_head:
+    name: "<yellow>Drill Head"
+    lore:
+      - "<gray>The cutting head of a caterpillar."
+      - "<gray>Digs a 3x3 tunnel when fuelled."
+      - "<dark_gray>Place it, then attach segments behind it."
+  drill_base:
+    name: "<yellow>Basic Drill Segment"
+    lore:
+      - "<gray>Connects the parts of a caterpillar."
+      - "<dark_gray>Place it directly behind the last part."
+
+gui:
+  title: "<dark_gray>Drill Head"
+  power-on: "<green>Power: On"
+  power-on-hint: "<gray>Click to turn off."
+  power-off: "<red>Power: Off"
+  power-off-hint: "<gray>Click to turn on."
+  info-title: "<gold>Status"
+  info-burn: "<gray>Fuel left in burning item: <white><percent>%"
+  info-segments: "<gray>Segments: <white><count>"
+  info-moving: "<gray>Segments are catching up..."
+  info-fuel-hint: "<gray>Top left: put fuel in the second slot."
+  info-consumption: "<gray>Middle row: consumption (items parts use)."
+  info-gathered: "<gray>Bottom row: gathered items."
+
+msg:
+  powered-on: "<green>Drill is turning on."
+  powered-off: "<red>Drill is turning off."
+  no-fuel: "<red>You need to add a fuel source to power on."
+  not-owner: "<red>This caterpillar belongs to someone else."
+  no-permission: "<red>You do not have permission to do that."
+  # Reasons the machine stopped by itself
+  stop:
+    unbreakable: "<red>The drill hit an unbreakable block and stopped."
+    protected: "<red>The drill is not allowed to break the blocks in front of it and stopped."
+    path_blocked: "<red>Something is blocking the caterpillar and it stopped."
+    out_of_fuel: "<red>The drill ran out of fuel and stopped."
+    world_border: "<red>The drill reached the world border and stopped."
+  place:
+    no-room: "<red>There is not enough free space to place that here."
+    protected: "<red>You cannot build here."
+    entity-in-way: "<red>Something is in the way."
+    height: "<red>That is too close to the world height limit."
+    not-behind: "<red>Place segments directly behind the last part of a caterpillar, in line with it."
+    moving: "<red>Wait until the caterpillar has stopped moving."
+    too-long: "<red>That caterpillar cannot get any longer."
+    overlap: "<red>Another caterpillar is already there."
+  command:
+    unknown-part: "<red>Unknown part: <part>. Available: <parts>"
+    unknown-player: "<red>Player not found: <player>"
+    given: "<green>Gave <amount> x <part> to <player>."
+    reloaded: "<green>Configuration reloaded."
+    list-header: "<gold>Caterpillars: <count>"
+    list-entry: "<gray>- <white><world> <x> <y> <z> <gray>facing <dir>, <segments> segment(s), owner <owner>"
+    usage: "<gray>Usage: /caterpillar give (part) [player] [amount] | reload | list"

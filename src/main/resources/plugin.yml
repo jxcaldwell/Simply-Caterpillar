@@ -1,0 +1,26 @@
+name: SimplyCaterpillar
+version: '${version}'
+main: dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin
+api-version: '26.2'
+description: A drivable-by-fuel caterpillar drill that digs 3x3 tunnels for you.
+website: https://github.com/jxcaldwell/Simply-Caterpillar
+authors: [The_Fireplace, Daniel-Mendes, jxcaldwell]
+commands:
+  caterpillar:
+    description: Administration commands for Simply Caterpillar.
+    usage: /<command> give <part> [player] [amount] | reload | list
+    aliases: [cat]
+    permission: simplycaterpillar.admin
+permissions:
+  simplycaterpillar.place:
+    description: Place caterpillar parts.
+    default: true
+  simplycaterpillar.use:
+    description: Open the GUI of your own caterpillars.
+    default: true
+  simplycaterpillar.craft:
+    description: Craft caterpillar parts.
+    default: true
+  simplycaterpillar.admin:
+    description: Give parts, reload, and access or break other players' caterpillars.
+    default: op

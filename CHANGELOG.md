@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Rewritten as a server-side Paper 26.2 plugin (Java 25). Forge, Fabric and client mods are no longer needed.
+  The Forge 1.20.1 sources are archived under `legacy/forge-1.20.1`; models and textures moved to `resourcepack/`.
+
+### Added
+
+- Milestone 1: drill head, basic drill segment, fuel and power GUI, 3x3 drilling and movement, protection-plugin
+  checks, persistence, `/caterpillar give|reload|list`.
+
 ## [1.20.1-8.0.2] - 2024-01-04
 
 Removed the `Pattern Book` item, while keep crashing on servers.

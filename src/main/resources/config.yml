@@ -1,0 +1,66 @@
+# Simply Caterpillar configuration.
+
+# Language file to use (lang/<name>.yml in this folder; en_us is shipped).
+language: en_us
+
+drill:
+  # Ticks of burning fuel between two drill-and-advance steps (original mod: 60 = 3 seconds).
+  head-interval-ticks: 60
+  # Ticks between each trailing segment catching up with the head (original mod: 20).
+  segment-interval-ticks: 20
+  # Can the drill break normally unbreakable blocks (see unbreakable-blocks below)?
+  break-unbreakable: false
+  # Item the drill "mines" with. This decides which blocks drop items and what they drop.
+  # NETHERITE_PICKAXE lets it harvest everything; nothing is ever used up.
+  tool: NETHERITE_PICKAXE
+  # Maximum number of segments behind the head.
+  max-segments: 32
+
+effects:
+  sounds: true
+  particles: true
+
+protection:
+  # Caterpillar blocks cannot be destroyed by explosions or moved by pistons.
+  explosion-proof: true
+
+recipes:
+  # Unlock the recipes for players when they join.
+  discover-on-join: true
+
+# Blocks used to build the machine. Use block materials that are NOT containers and do not
+# change by themselves. Placed items are tagged, so these materials can still be used normally.
+blocks:
+  head-base: GRAY_GLAZED_TERRACOTTA
+  head-bit: IRON_BLOCK
+  head-bit-center: REDSTONE_LAMP
+  segment-spacer: WAXED_COPPER_BLOCK
+
+# Blocks the drill treats as unbreakable.
+unbreakable-blocks:
+  - BEDROCK
+  - BARRIER
+  - STRUCTURE_BLOCK
+  - STRUCTURE_VOID
+  - END_PORTAL_FRAME
+  - END_PORTAL
+  - END_GATEWAY
+  - COMMAND_BLOCK
+  - CHAIN_COMMAND_BLOCK
+  - REPEATING_COMMAND_BLOCK
+  - JIGSAW
+  - REINFORCED_DEEPSLATE
+
+# Fuel accepted by the drill head and its burn time in ticks (same numbers as a furnace).
+# Keys starting with # are item tags.
+fuels:
+  COAL: 1600
+  CHARCOAL: 1600
+  COAL_BLOCK: 16000
+  LAVA_BUCKET: 20000
+  BLAZE_ROD: 2400
+  DRIED_KELP_BLOCK: 4000
+  BAMBOO: 50
+  STICK: 100
+  "#minecraft:planks": 300
+  "#minecraft:logs_that_burn": 300
