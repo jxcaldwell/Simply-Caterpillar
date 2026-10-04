@@ -8,6 +8,8 @@ import dev.the_fireplace.caterpillar.paper.IncineratorGui;
 import dev.the_fireplace.caterpillar.paper.StorageGui;
 import dev.the_fireplace.caterpillar.paper.TransporterGui;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -36,12 +38,11 @@ public final class GuiListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
         Inventory top = event.getView().getTopInventory();
-        if (top.getHolder() instanceof ReinforcementGui || top.getHolder() instanceof DecorationGui) {
-            clickSettings(event, top);
+        if (top.getHolder() instanceof ReinforcementGui || top.getHolder() instanceof DecorationGui
+                || top.getHolder() instanceof IncineratorGui) {
+            ghostClick(event, top);
         } else if (top.getHolder() instanceof StorageGui storage) {
             clickStorage(event, storage);
-        } else if (top.getHolder() instanceof IncineratorGui filter) {
-            clickIncinerator(event, filter);
         } else if (top.getHolder() instanceof HeadGui gui) {
             clickHead(event, gui);
         } else if (top.getHolder() instanceof TransporterGui) {
@@ -73,43 +74,75 @@ public final class GuiListener implements Listener {
         plugin.manager().markDirty();
     }
 
-    /** Reinforcement and decoration settings are pure buttons and "ghost" slots: nothing is moved in or out. */
-    private void clickSettings(InventoryClickEvent event, Inventory top) {
-        event.setCancelled(true);
+    /**
+     * The settings GUIs (reinforcement, decoration, incinerator filter) hold "ghost" items: clicking a slot with an
+     * item on the cursor copies its type, nothing is moved in or out. The player's own inventory below works as
+     * usual so they can pick items up; shift-clicking an item there adds its type to the first free slot.
+     *
+     * @return true if the click was handled as a ghost-slot click (and cancelled)
+     */
+    private boolean ghostClick(InventoryClickEvent event, Inventory top) {
         int raw = event.getRawSlot();
-        if (raw < 0 || raw >= top.getSize()) {
-            return;
+        InventoryAction action = event.getAction();
+        if (raw >= top.getSize() || raw < 0) {
+            // Bottom inventory (or outside the window): normal, except moves that would reach into the top.
+            if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+                event.setCancelled(true);
+                ItemStack current = event.getCurrentItem();
+                if (current != null && !current.getType().isAir() && addType(top, current.getType())) {
+                    plugin.manager().markDirty();
+                }
+            } else if (action == InventoryAction.COLLECT_TO_CURSOR) {
+                event.setCancelled(true);
+            }
+            return false;
         }
-        boolean changed = top.getHolder() instanceof ReinforcementGui reinforcement
-                ? reinforcement.click(raw, event.getCursor())
-                : ((DecorationGui) top.getHolder()).click(raw, event.getCursor());
+        event.setCancelled(true);
+        // Number keys and the off-hand key "swap" an item into the slot: use that item as if it were on the cursor.
+        ItemStack cursor = event.getCursor();
+        if (event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() >= 0) {
+            cursor = event.getWhoClicked().getInventory().getItem(event.getHotbarButton());
+        } else if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            cursor = event.getWhoClicked().getInventory().getItemInOffHand();
+        }
+        boolean changed = setSlot(top, raw, cursor, event.getClick().isRightClick());
         if (changed) {
             plugin.manager().markDirty();
         }
+        return true;
     }
 
-    /** The incinerator filter is a list of item types: nothing is ever moved in or out of it. */
-    private void clickIncinerator(InventoryClickEvent event, IncineratorGui gui) {
-        event.setCancelled(true);
-        int raw = event.getRawSlot();
-        if (raw < 0) {
-            return;
+    private static boolean setSlot(Inventory top, int raw, ItemStack cursor, boolean rightClick) {
+        Object holder = top.getHolder();
+        if (holder instanceof ReinforcementGui reinforcement) {
+            return reinforcement.click(raw, cursor);
         }
-        if (raw < IncineratorGui.SIZE) {
-            ItemStack cursor = event.getCursor();
-            if (!cursor.getType().isAir()) {
-                gui.set(raw, cursor.getType());
+        if (holder instanceof DecorationGui decoration) {
+            return decoration.click(raw, cursor, rightClick);
+        }
+        if (holder instanceof IncineratorGui filter) {
+            if (cursor != null && !cursor.getType().isAir()) {
+                filter.set(raw, cursor.getType());
             } else {
-                gui.getInventory().setItem(raw, null);
+                filter.getInventory().setItem(raw, null);
             }
-            plugin.manager().markDirty();
-        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            ItemStack current = event.getCurrentItem();
-            if (current != null && !current.getType().isAir()) {
-                gui.addType(current.getType());
-                plugin.manager().markDirty();
-            }
+            return true;
         }
+        return false;
+    }
+
+    private static boolean addType(Inventory top, org.bukkit.Material material) {
+        Object holder = top.getHolder();
+        if (holder instanceof ReinforcementGui reinforcement) {
+            return reinforcement.addType(material);
+        }
+        if (holder instanceof DecorationGui decoration) {
+            return decoration.addType(material);
+        }
+        if (holder instanceof IncineratorGui filter) {
+            return filter.addType(material);
+        }
+        return false;
     }
 
     private void clickHead(InventoryClickEvent event, HeadGui gui) {
@@ -195,7 +228,21 @@ public final class GuiListener implements Listener {
     public void onDrag(InventoryDragEvent event) {
         Object holder = event.getView().getTopInventory().getHolder();
         if (holder instanceof IncineratorGui || holder instanceof ReinforcementGui || holder instanceof DecorationGui) {
+            Inventory top = event.getView().getTopInventory();
+            List<Integer> inTop = new ArrayList<>();
+            for (int raw : event.getRawSlots()) {
+                if (raw < top.getSize()) {
+                    inTop.add(raw);
+                }
+            }
+            if (inTop.isEmpty()) {
+                return; // a drag within the player's own inventory
+            }
             event.setCancelled(true);
+            // A click with a slight mouse movement arrives as a one-slot drag: treat it as the click it was.
+            if (inTop.size() == 1 && setSlot(top, inTop.get(0), event.getOldCursor(), false)) {
+                plugin.manager().markDirty();
+            }
             return;
         }
         if (holder instanceof TransporterGui) {

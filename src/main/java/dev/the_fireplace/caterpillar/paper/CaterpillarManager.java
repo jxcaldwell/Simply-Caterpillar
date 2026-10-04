@@ -678,7 +678,7 @@ public final class CaterpillarManager {
                 DecorationGui decoration = decorations.get(segment.id());
                 if (decoration != null) {
                     List<List<String>> patterns = new ArrayList<>();
-                    for (int p = 0; p < DecorationGui.PATTERNS; p++) {
+                    for (int p = 0; p < DecorationGui.MAX_PATTERNS; p++) {
                         List<String> row = new ArrayList<>();
                         for (int i = 0; i < DecorationGui.POSITIONS; i++) {
                             row.add(name(decoration.material(p, i)));
@@ -686,6 +686,7 @@ public final class CaterpillarManager {
                         patterns.add(row);
                     }
                     entry.put("patterns", patterns);
+                    entry.put("cycle-length", decoration.cycle());
                     entry.put("current-pattern", decoration.current());
                 }
                 TransporterGui transporter = transporters.get(segment.id());
@@ -810,7 +811,7 @@ public final class CaterpillarManager {
                 DecorationGui restoredDecoration = decorations.get(segmentId);
                 if (restoredDecoration != null) {
                     if (entry.get("patterns") instanceof List<?> savedPatterns) {
-                        for (int p = 0; p < Math.min(savedPatterns.size(), DecorationGui.PATTERNS); p++) {
+                        for (int p = 0; p < Math.min(savedPatterns.size(), DecorationGui.MAX_PATTERNS); p++) {
                             if (savedPatterns.get(p) instanceof List<?> row) {
                                 for (int i = 0; i < Math.min(row.size(), DecorationGui.POSITIONS); i++) {
                                     restoredDecoration.setMaterial(p, i, material(row.get(i)));
@@ -818,6 +819,8 @@ public final class CaterpillarManager {
                             }
                         }
                     }
+                    restoredDecoration.setCycle(entry.get("cycle-length") instanceof Number length
+                            ? length.intValue() : DecorationGui.DEFAULT_CYCLE);
                     if (entry.get("current-pattern") instanceof Number number) {
                         restoredDecoration.setCurrent(number.intValue());
                     }

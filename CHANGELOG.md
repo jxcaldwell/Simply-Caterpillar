@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Decoration placer: adjustable cycle length (1-16 patterns). Fixed: blocks could not be picked up to set reinforcement, decoration or incinerator slots; shift-click now adds a block.
 - Milestone 4: reinforcement builder and decoration placer, using blocks from the consumption slots.
 - Milestone 3: transporter segment that carries and releases chest minecarts full of gathered items.
 - Milestone 2: storage, collector, incinerator and drill-seat segments (see the README for how they behave), with

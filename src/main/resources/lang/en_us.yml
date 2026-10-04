@@ -97,7 +97,7 @@ gui:
   decoration-title: "<dark_gray>Decoration Placer"
   decoration-info-title: "<gold>Decoration patterns"
   decoration-info-lore:
-    - "<gray>Ten patterns, used in turn: one per block moved,"
+    - "<gray>The patterns are used in turn, one per block moved,"
     - "<gray>placed in the tunnel slice the placer has just left."
     - "<gray>The grid is that slice seen from behind; the dark"
     - "<gray>middle is where the caterpillar itself runs."
@@ -107,8 +107,13 @@ gui:
   decoration-next: "<yellow>Next pattern"
   decoration-copy-all: "<yellow>Copy this pattern to all ten"
   decoration-copy-all-lore: ["<gray>Makes every block of the tunnel the same."]
+  decoration-cycle: "<gold>Cycle: repeats every <n> blocks"
+  decoration-cycle-lore:
+    - "<gray>How many patterns are used before starting over."
+    - "<gray>Something in one pattern is placed every <white>n</white> blocks."
+    - "<yellow>Left-click: longer   Right-click: shorter"
   decoration-clear: "<red>Clear this pattern"
-  decoration-pattern: "<gold>Pattern <n> of 10"
+  decoration-pattern: "<gold>Pattern <n> of <total>"
   decoration-next-placed: "<gray>Next placed: pattern <n>"
   transporter-title: "<dark_gray>Transporter Cargo"
   storage-title: "<dark_gray>Storage Segment"

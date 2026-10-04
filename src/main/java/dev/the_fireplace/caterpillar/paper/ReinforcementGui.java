@@ -107,6 +107,21 @@ public final class ReinforcementGui implements InventoryHolder {
         replace[side.ordinal()][what.ordinal()] = on;
     }
 
+    /** Shift-click from the player's inventory: use the block for the first empty position. */
+    public boolean addType(Material material) {
+        if (!Icons.placeable(material)) {
+            return false;
+        }
+        for (int i = 0; i < POSITIONS; i++) {
+            if (pattern[i] == null) {
+                pattern[i] = material;
+                render();
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Which side a position belongs to. */
     public static Side sideOf(int position) {
         if (position <= 4) {
