@@ -11,7 +11,9 @@ public enum SegmentKind {
     /** Destroys the configured item types in the gathered slots. */
     INCINERATOR(true),
     /** A seat a player can ride the caterpillar on. */
-    SEAT(false);
+    SEAT(false),
+    /** Carries a chest minecart under itself, fills it with full stacks and releases it when it is full. */
+    TRANSPORTER(true);
 
     private final boolean ticks;
 

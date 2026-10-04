@@ -42,6 +42,9 @@ blocks:
   incinerator: RED_NETHER_BRICKS
   # A stair block looks like a seat; it is turned to face the way the caterpillar travels.
   seat: QUARTZ_STAIRS
+  transporter: CYAN_CONCRETE
+  # The block shown under a transporter while it carries a chest minecart.
+  transporter-cart: BROWN_TERRACOTTA
 
 collector:
   # How far from the collector segment (in blocks, measured from its faces) dropped items are picked up.

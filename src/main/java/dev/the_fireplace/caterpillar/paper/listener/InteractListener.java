@@ -6,6 +6,7 @@ import dev.the_fireplace.caterpillar.core.SegmentKind;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
 import dev.the_fireplace.caterpillar.paper.IncineratorGui;
 import dev.the_fireplace.caterpillar.paper.StorageGui;
+import dev.the_fireplace.caterpillar.paper.TransporterGui;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -62,6 +63,9 @@ public final class InteractListener implements Listener {
 
         Pos pos = new Pos(block.getX(), block.getY(), block.getZ());
         Machine.Segment segment = machine.segmentAt(pos);
+        if (segment == null) {
+            segment = machine.segmentWithCartAt(pos);
+        }
 
         // Anyone may take a seat; everything else is for the owner (or an admin).
         if (segment != null && segment.kind() == SegmentKind.SEAT) {
@@ -86,6 +90,14 @@ public final class InteractListener implements Listener {
             IncineratorGui filter = plugin.manager().incinerator(segment.id());
             if (filter != null) {
                 player.openInventory(filter.getInventory());
+                return;
+            }
+        }
+
+        if (segment != null && segment.kind() == SegmentKind.TRANSPORTER) {
+            TransporterGui cargo = plugin.manager().transporter(segment.id());
+            if (cargo != null) {
+                player.openInventory(cargo.getInventory());
                 return;
             }
         }

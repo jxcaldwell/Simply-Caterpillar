@@ -28,14 +28,18 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 /**
  * Owns every caterpillar: ticks them, tracks which blocks belong to which machine, and persists everything to
@@ -56,6 +60,7 @@ public final class CaterpillarManager {
     /** Per-segment data, keyed by segment id. */
     private final Map<UUID, StorageGui> storages = new HashMap<>();
     private final Map<UUID, IncineratorGui> incinerators = new HashMap<>();
+    private final Map<UUID, TransporterGui> transporters = new HashMap<>();
     private final Seats seats;
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
@@ -92,6 +97,10 @@ public final class CaterpillarManager {
 
     public IncineratorGui incinerator(UUID segmentId) {
         return incinerators.get(segmentId);
+    }
+
+    public TransporterGui transporter(UUID segmentId) {
+        return transporters.get(segmentId);
     }
 
     public Seats seats() {
@@ -185,6 +194,172 @@ public final class CaterpillarManager {
         }
     }
 
+    // ---------------------------------------------------------------- transporters
+
+    /** Takes one item from the consumption slots: the drill head's first, then each storage segment's. */
+    public boolean takeConsumption(Machine machine, Material material) {
+        HeadGui head = guis.get(machine.id());
+        if (head != null && takeOne(head.getInventory(), HeadGui.CONSUMPTION_START, HeadGui.CONSUMPTION_END, material)) {
+            dirty = true;
+            return true;
+        }
+        for (Machine.Segment segment : machine.segments()) {
+            StorageGui storage = storages.get(segment.id());
+            if (storage != null && takeOne(storage.getInventory(), StorageGui.CONSUMPTION_START,
+                    StorageGui.CONSUMPTION_END, material)) {
+                dirty = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean takeOne(org.bukkit.inventory.Inventory inventory, int from, int to, Material material) {
+        for (int slot = from; slot <= to; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack != null && stack.getType() == material) {
+                if (stack.getAmount() <= 1) {
+                    inventory.setItem(slot, null);
+                } else {
+                    stack.setAmount(stack.getAmount() - 1);
+                    inventory.setItem(slot, stack);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * One round of a transporter's work: fetch a chest minecart if it has none, move full stacks of gathered items
+     * into the cart, and send the cart off once every slot is a full stack.
+     */
+    public void tickTransporter(Machine machine, Machine.Segment segment) {
+        TransporterGui data = transporters.get(segment.id());
+        World world = Bukkit.getWorld(machine.world());
+        if (data == null || world == null) {
+            return;
+        }
+
+        if (!segment.cart()) {
+            Pos below = segment.cartPos();
+            if (!plugin.env().cartSpace(machine, below) || !takeConsumption(machine, Material.CHEST_MINECART)) {
+                return;
+            }
+            Block block = world.getBlockAt(below.x(), below.y(), below.z());
+            data.setPreviousBlock(block.getBlockData().getAsString());
+            block.setBlockData(plugin.settings().transporterCart.createBlockData(), false);
+            machine.setCart(segment, true);
+            dirty = true;
+        }
+
+        HeadGui head = guis.get(machine.id());
+        if (head != null) {
+            moveFullStacks(head.getInventory(), HeadGui.GATHERED_START, HeadGui.GATHERED_END, data);
+        }
+        for (Machine.Segment other : machine.segments()) {
+            StorageGui storage = storages.get(other.id());
+            if (storage != null) {
+                moveFullStacks(storage.getInventory(), StorageGui.GATHERED_START, StorageGui.GATHERED_END, data);
+            }
+        }
+
+        if (data.isFull()) {
+            releaseCart(machine, segment, data, world);
+        }
+    }
+
+    private void moveFullStacks(org.bukkit.inventory.Inventory from, int first, int last, TransporterGui data) {
+        for (int slot = first; slot <= last; slot++) {
+            ItemStack stack = from.getItem(slot);
+            if (stack != null && !stack.getType().isAir() && stack.getAmount() >= stack.getMaxStackSize()
+                    && data.addStack(stack.clone())) {
+                from.setItem(slot, null);
+                dirty = true;
+            }
+        }
+    }
+
+    /** Sends the loaded chest minecart off and puts back the block the cart was covering. */
+    private void releaseCart(Machine machine, Machine.Segment segment, TransporterGui data, World world) {
+        Pos cartPos = segment.cartPos();
+        ItemStack[] cargo = data.getInventory().getContents();
+        data.getInventory().clear();
+
+        String previous = data.previousBlock();
+        restoreBlock(world, cartPos, previous);
+        data.setPreviousBlock(null);
+        machine.setCart(segment, false);
+        dirty = true;
+
+        Location at = new Location(world, cartPos.x() + 0.5, cartPos.y(), cartPos.z() + 0.5);
+        StorageMinecart cart = world.spawn(at, StorageMinecart.class, spawned -> spawned.getInventory().setContents(cargo));
+        if (previous != null && Tag.RAILS.isTagged(restoreData(previous).getMaterial())) {
+            // Roll back down the rails, away from the drill.
+            cart.setVelocity(new Vector(-machine.facing().dx * 0.4, 0, -machine.facing().dz * 0.4));
+        }
+    }
+
+    /** Moves a transporter's cart block along with the segment, which has just stepped one block forward. */
+    public void moveCart(Machine machine, Machine.Segment segment) {
+        TransporterGui data = transporters.get(segment.id());
+        World world = Bukkit.getWorld(machine.world());
+        if (data == null || world == null || !segment.cart()) {
+            return;
+        }
+        Pos to = segment.cartPos();
+        Pos from = to.relative(machine.facing(), -1);
+        Block target = world.getBlockAt(to.x(), to.y(), to.z());
+        String coveredNow = target.getBlockData().getAsString();
+        restoreBlock(world, from, data.previousBlock());
+        data.setPreviousBlock(coveredNow);
+        target.setBlockData(plugin.settings().transporterCart.createBlockData(), false);
+        dirty = true;
+    }
+
+    /** A player broke the cart block under a transporter: give back the minecart and its cargo. */
+    public void breakCart(Machine machine, Machine.Segment segment, Location dropAt, boolean dropMinecart) {
+        TransporterGui data = transporters.get(segment.id());
+        if (data == null) {
+            return;
+        }
+        World world = Bukkit.getWorld(machine.world());
+        Pos cartPos = segment.cartPos();
+        String previous = data.previousBlock();
+        data.setPreviousBlock(null);
+        machine.setCart(segment, false);
+        reindex(machine);
+        dirty = true;
+
+        for (ItemStack stack : data.getInventory().getContents()) {
+            if (stack != null && !stack.getType().isAir()) {
+                drop(dropAt, stack);
+            }
+        }
+        data.getInventory().clear();
+        if (dropMinecart) {
+            drop(dropAt, new ItemStack(Material.CHEST_MINECART));
+        }
+        // The break itself finishes after this event, so the old block is put back a tick later.
+        Bukkit.getScheduler().runTask(plugin, () -> restoreBlock(world, cartPos, previous));
+    }
+
+    private static org.bukkit.block.data.BlockData restoreData(String data) {
+        try {
+            return Bukkit.createBlockData(data);
+        } catch (IllegalArgumentException ex) {
+            return Material.AIR.createBlockData();
+        }
+    }
+
+    private static void restoreBlock(World world, Pos pos, String data) {
+        if (world == null) {
+            return;
+        }
+        world.getBlockAt(pos.x(), pos.y(), pos.z()).setBlockData(
+                data == null ? Material.AIR.createBlockData() : restoreData(data), false);
+    }
+
     // ---------------------------------------------------------------- creating and removing
 
     public Machine create(Player owner, World world, Facing facing, Pos base) {
@@ -219,13 +394,33 @@ public final class CaterpillarManager {
             case STORAGE -> storages.put(segment.id(), new StorageGui(machine.id(), segment.id(), plugin.lang()));
             case INCINERATOR ->
                     incinerators.put(segment.id(), new IncineratorGui(machine.id(), segment.id(), plugin.lang()));
+            case TRANSPORTER ->
+                    transporters.put(segment.id(), new TransporterGui(machine.id(), segment.id(), plugin.lang()));
             default -> { }
         }
     }
 
     /** Closes the GUI of a segment, returns what it stored, and forgets its per-segment data. */
-    private List<ItemStack> releaseSegmentData(Machine.Segment segment) {
+    private List<ItemStack> releaseSegmentData(Machine machine, Machine.Segment segment, List<Runnable> afterClear) {
         List<ItemStack> contents = new ArrayList<>();
+        TransporterGui transporter = transporters.remove(segment.id());
+        if (transporter != null) {
+            for (HumanEntity viewer : new ArrayList<>(transporter.getInventory().getViewers())) {
+                viewer.closeInventory();
+            }
+            for (ItemStack stack : transporter.getInventory().getContents()) {
+                if (stack != null && !stack.getType().isAir()) {
+                    contents.add(stack);
+                }
+            }
+            if (segment.cart()) {
+                contents.add(new ItemStack(Material.CHEST_MINECART));
+                World world = Bukkit.getWorld(machine.world());
+                Pos cartPos = segment.cartPos();
+                String previous = transporter.previousBlock();
+                afterClear.add(() -> restoreBlock(world, cartPos, previous));
+            }
+        }
         StorageGui storage = storages.remove(segment.id());
         if (storage != null) {
             for (HumanEntity viewer : new ArrayList<>(storage.getInventory().getViewers())) {
@@ -301,9 +496,11 @@ public final class CaterpillarManager {
         plugin.env().clear(machine, pos);
         reindex(machine);
         dirty = true;
-        for (ItemStack stored : releaseSegmentData(segment)) {
+        List<Runnable> restores = new ArrayList<>();
+        for (ItemStack stored : releaseSegmentData(machine, segment, restores)) {
             drop(dropAt, stored);
         }
+        restores.forEach(Runnable::run);
         if (dropPart) {
             drop(dropAt, plugin.items().create(PartType.forSegment(segment.kind()), 1));
         }
@@ -321,8 +518,9 @@ public final class CaterpillarManager {
                 drops.add(plugin.items().create(PartType.forSegment(segment.kind()), 1));
             }
         }
+        List<Runnable> restores = new ArrayList<>();
         for (Machine.Segment segment : machine.segments()) {
-            drops.addAll(releaseSegmentData(segment));
+            drops.addAll(releaseSegmentData(machine, segment, restores));
         }
 
         HeadGui gui = guis.remove(machine.id());
@@ -343,6 +541,7 @@ public final class CaterpillarManager {
         for (Pos pos : machine.footprint()) {
             plugin.env().clear(machine, pos);
         }
+        restores.forEach(Runnable::run);
         unindex(machine.id());
         machines.remove(machine.id());
         dirty = true;
@@ -419,6 +618,14 @@ public final class CaterpillarManager {
                 IncineratorGui incinerator = incinerators.get(segment.id());
                 if (incinerator != null) {
                     entry.put("filter", encode(incinerator.getInventory(), 0, IncineratorGui.SIZE - 1));
+                }
+                TransporterGui transporter = transporters.get(segment.id());
+                if (transporter != null) {
+                    entry.put("cart", segment.cart());
+                    if (transporter.previousBlock() != null) {
+                        entry.put("previous", transporter.previousBlock());
+                    }
+                    entry.put("cargo", encode(transporter.getInventory(), 0, TransporterGui.SIZE - 1));
                 }
                 segments.add(entry);
             }
@@ -509,9 +716,19 @@ public final class CaterpillarManager {
                 SegmentKind kind = SegmentKind.valueOf(String.valueOf(entry.get("kind")));
                 Object savedId = entry.get("id");
                 UUID segmentId = savedId == null ? UUID.randomUUID() : UUID.fromString(String.valueOf(savedId));
-                machine.restoreSegment(segmentId, kind, pos((List<?>) entry.get("pos")));
+                boolean cart = Boolean.parseBoolean(String.valueOf(entry.get("cart")));
+                machine.restoreSegment(segmentId, kind, pos((List<?>) entry.get("pos")), cart);
                 Machine.Segment restored = machine.segments().get(machine.segments().size() - 1);
                 createSegmentData(machine, restored);
+                TransporterGui restoredTransporter = transporters.get(segmentId);
+                if (restoredTransporter != null) {
+                    if (entry.get("previous") != null) {
+                        restoredTransporter.setPreviousBlock(String.valueOf(entry.get("previous")));
+                    }
+                    if (entry.get("cargo") instanceof Map<?, ?> savedCargo) {
+                        decode(savedCargo, restoredTransporter.getInventory(), idText);
+                    }
+                }
                 if (entry.get("items") instanceof Map<?, ?> saved && storages.get(segmentId) != null) {
                     decode(saved, storages.get(segmentId).getInventory(), idText);
                 }

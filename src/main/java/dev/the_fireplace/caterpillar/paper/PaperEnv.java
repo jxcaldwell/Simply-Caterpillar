@@ -202,9 +202,24 @@ public final class PaperEnv implements Env {
     }
 
     @Override
+    public boolean cartSpace(Machine machine, Pos pos) {
+        World world = world(machine);
+        if (world == null || pos.y() < world.getMinHeight() || pos.y() >= world.getMaxHeight()) {
+            return false;
+        }
+        if (plugin.manager().isPart(machine.world(), pos)) {
+            return false;
+        }
+        Block block = block(world, pos);
+        return block.getType().isAir() || block.isLiquid() || block.isPassable();
+    }
+
+    @Override
     public void segmentMoved(Machine machine, Machine.Segment segment) {
-        if (segment.kind() == SegmentKind.SEAT) {
-            plugin.manager().seats().follow(machine, segment);
+        switch (segment.kind()) {
+            case SEAT -> plugin.manager().seats().follow(machine, segment);
+            case TRANSPORTER -> plugin.manager().moveCart(machine, segment);
+            default -> { }
         }
     }
 
@@ -212,6 +227,7 @@ public final class PaperEnv implements Env {
     public void segmentTick(Machine machine, Machine.Segment segment) {
         switch (segment.kind()) {
             case COLLECTOR -> collect(machine, segment);
+            case TRANSPORTER -> plugin.manager().tickTransporter(machine, segment);
             case INCINERATOR -> {
                 IncineratorGui filter = plugin.manager().incinerator(segment.id());
                 if (filter != null) {

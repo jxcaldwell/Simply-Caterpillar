@@ -37,6 +37,9 @@ public interface Env {
 
     void clear(Machine machine, Pos pos);
 
+    /** True if a transporter's cart may occupy this position (air, liquid or a passable block such as a rail). */
+    boolean cartSpace(Machine machine, Pos pos);
+
     /** A segment has just stepped forward to its new position (already rendered there). */
     void segmentMoved(Machine machine, Machine.Segment segment);
 

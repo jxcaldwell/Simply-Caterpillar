@@ -35,7 +35,15 @@ item:
       - "<gray>Right-click it to ride the caterpillar."
       - "<dark_gray>It rides along as the caterpillar moves."
 
+  transporter:
+    name: "<yellow>Transporter Segment"
+    lore:
+      - "<gray>Carries a chest minecart under itself, fills it with"
+      - "<gray>full stacks of gathered items and sends it off when full."
+      - "<dark_gray>Put chest minecarts in the drill head's consumption slots."
+
 gui:
+  transporter-title: "<dark_gray>Transporter Cargo"
   storage-title: "<dark_gray>Storage Segment"
   storage-info-title: "<gold>Storage"
   storage-info-lore:

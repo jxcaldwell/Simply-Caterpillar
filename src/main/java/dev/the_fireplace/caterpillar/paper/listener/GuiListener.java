@@ -4,6 +4,7 @@ import dev.the_fireplace.caterpillar.core.Machine;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
 import dev.the_fireplace.caterpillar.paper.IncineratorGui;
 import dev.the_fireplace.caterpillar.paper.StorageGui;
+import dev.the_fireplace.caterpillar.paper.TransporterGui;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -39,6 +40,8 @@ public final class GuiListener implements Listener {
             clickIncinerator(event, filter);
         } else if (top.getHolder() instanceof HeadGui gui) {
             clickHead(event, gui);
+        } else if (top.getHolder() instanceof TransporterGui) {
+            plugin.manager().markDirty();
         }
     }
 
@@ -176,6 +179,10 @@ public final class GuiListener implements Listener {
             event.setCancelled(true);
             return;
         }
+        if (holder instanceof TransporterGui) {
+            plugin.manager().markDirty();
+            return;
+        }
         if (holder instanceof StorageGui) {
             for (int raw : event.getRawSlots()) {
                 if (raw < StorageGui.SIZE && !StorageGui.isStorageSlot(raw)) {
@@ -208,7 +215,8 @@ public final class GuiListener implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         Object holder = event.getView().getTopInventory().getHolder();
-        if (holder instanceof HeadGui || holder instanceof StorageGui || holder instanceof IncineratorGui) {
+        if (holder instanceof HeadGui || holder instanceof StorageGui || holder instanceof IncineratorGui
+                || holder instanceof TransporterGui) {
             plugin.manager().markDirty();
         }
     }

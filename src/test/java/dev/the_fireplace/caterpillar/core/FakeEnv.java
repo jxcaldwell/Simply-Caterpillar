@@ -120,6 +120,12 @@ final class FakeEnv implements Env {
     }
 
     @Override
+    public boolean cartSpace(Machine machine, Pos pos) {
+        Terrain terrain = terrain(machine, pos);
+        return terrain == Terrain.EMPTY || terrain == Terrain.FLUID;
+    }
+
+    @Override
     public void segmentMoved(Machine machine, Machine.Segment segment) {
         moved.add(segment.id() + "@" + segment.pos().x() + "," + segment.pos().y() + "," + segment.pos().z());
     }

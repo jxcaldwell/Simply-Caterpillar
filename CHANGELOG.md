@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Milestone 3: transporter segment that carries and releases chest minecarts full of gathered items.
 - Milestone 2: storage, collector, incinerator and drill-seat segments (see the README for how they behave), with
   the original mod's recipes. Jar names now include the commit id.
 - Milestone 1: drill head, basic drill segment, fuel and power GUI, 3x3 drilling and movement, protection-plugin

@@ -31,11 +31,22 @@ public final class Machine {
         private final UUID id;
         private final SegmentKind kind;
         private Pos pos;
+        private boolean cart;
 
         public Segment(UUID id, SegmentKind kind, Pos pos) {
             this.id = id;
             this.kind = kind;
             this.pos = pos;
+        }
+
+        /** True while a transporter has its cart block attached directly below it. */
+        public boolean cart() {
+            return cart;
+        }
+
+        /** The block the cart occupies (only meaningful while {@link #cart()} is true). */
+        public Pos cartPos() {
+            return pos.add(0, -1, 0);
         }
 
         /** Stable identity: it survives the segment moving, so per-segment data (inventories, seats) can use it. */
@@ -156,6 +167,9 @@ public final class Machine {
         }
         for (Segment segment : segments) {
             all.add(segment.pos);
+            if (segment.cart) {
+                all.add(segment.cartPos());
+            }
         }
         return all;
     }
@@ -166,6 +180,9 @@ public final class Machine {
         reach.add(base.relative(facing, 3));
         for (Segment segment : segments) {
             reach.add(segment.pos.relative(facing, 1));
+            if (segment.cart) {
+                reach.add(segment.cartPos().relative(facing, 1));
+            }
         }
         return reach;
     }
@@ -187,6 +204,24 @@ public final class Machine {
             }
         }
         return null;
+    }
+
+    /** The transporter whose cart block is at {@code pos}, or null. */
+    public Segment segmentWithCartAt(Pos pos) {
+        for (Segment segment : segments) {
+            if (segment.cart && segment.cartPos().equals(pos)) {
+                return segment;
+            }
+        }
+        return null;
+    }
+
+    /** Records that the transporter now has (or no longer has) a cart block below it. */
+    public void setCart(Segment segment, boolean cart) {
+        if (segment.cart != cart) {
+            segment.cart = cart;
+            layoutVersion++;
+        }
     }
 
     /** The position of the last part of the chain: the final segment, or the head base when there is none. */
@@ -259,9 +294,15 @@ public final class Machine {
     }
 
     /** Adds a segment without touching the world; used when loading from disk. */
-    public void restoreSegment(UUID id, SegmentKind kind, Pos pos) {
-        segments.add(new Segment(id, kind, pos));
+    public void restoreSegment(UUID id, SegmentKind kind, Pos pos, boolean cart) {
+        Segment segment = new Segment(id, kind, pos);
+        segment.cart = cart && kind == SegmentKind.TRANSPORTER;
+        segments.add(segment);
         layoutVersion++;
+    }
+
+    public void restoreSegment(UUID id, SegmentKind kind, Pos pos) {
+        restoreSegment(id, kind, pos, false);
     }
 
     public void restoreSegment(SegmentKind kind, Pos pos) {
@@ -495,6 +536,11 @@ public final class Machine {
         Pos next = segment.pos.relative(facing, 1);
         Terrain terrain = env.terrain(this, next);
         if (terrain != Terrain.EMPTY && terrain != Terrain.FLUID) {
+            powerOff(env, Msg.PATH_BLOCKED);
+            return;
+        }
+
+        if (segment.cart && !env.cartSpace(this, segment.cartPos().relative(facing, 1))) {
             powerOff(env, Msg.PATH_BLOCKED);
             return;
         }

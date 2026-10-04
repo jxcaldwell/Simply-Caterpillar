@@ -51,7 +51,10 @@ public final class ProtectionListener implements Listener {
         Location at = block.getLocation().add(0.5, 0.5, 0.5);
         boolean dropParts = CaterpillarManager.givesParts(player);
         Pos pos = new Pos(block.getX(), block.getY(), block.getZ());
-        if (machine.isHeadPos(pos)) {
+        Machine.Segment cartOwner = machine.segmentWithCartAt(pos);
+        if (cartOwner != null) {
+            plugin.manager().breakCart(machine, cartOwner, at, dropParts);
+        } else if (machine.isHeadPos(pos)) {
             plugin.manager().dismantle(machine, at, dropParts);
         } else {
             plugin.manager().removeSegment(machine, pos, at, dropParts);

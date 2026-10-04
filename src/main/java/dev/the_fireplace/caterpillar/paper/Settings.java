@@ -32,6 +32,8 @@ public final class Settings {
     public final Material collector;
     public final Material incinerator;
     public final Material seat;
+    public final Material transporter;
+    public final Material transporterCart;
 
     /** Height above the seat block's floor at which the invisible seat entity is placed. */
     public final double seatYOffset;
@@ -69,6 +71,8 @@ public final class Settings {
         collector = block(config, "blocks.collector", Material.LAPIS_BLOCK, log);
         incinerator = block(config, "blocks.incinerator", Material.RED_NETHER_BRICKS, log);
         seat = block(config, "blocks.seat", Material.QUARTZ_STAIRS, log);
+        transporter = block(config, "blocks.transporter", Material.CYAN_CONCRETE, log);
+        transporterCart = block(config, "blocks.transporter-cart", Material.BROWN_TERRACOTTA, log);
 
         seatYOffset = config.getDouble("seat.y-offset", 0.4);
         collectorRadius = Math.max(0.5, Math.min(16, config.getDouble("collector.radius", 3.0)));
@@ -94,6 +98,7 @@ public final class Settings {
             case COLLECTOR -> collector;
             case INCINERATOR -> incinerator;
             case DRILL_SEAT -> seat;
+            case TRANSPORTER -> transporter;
         };
     }
 

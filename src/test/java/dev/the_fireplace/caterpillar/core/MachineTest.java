@@ -657,4 +657,68 @@ class MachineTest {
         assertEquals(new Pos(0, 64, 3), m.segments().get(3).pos());
         assertEquals("segment:SEAT", env.placed.get(new Pos(0, 64, 3)));
     }
+
+    // ------------------------------------------------------------------ transporter carts
+
+    @Test
+    void aCartAddsItsBlockToTheFootprintAndFindsItsTransporter() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.TRANSPORTER);
+        Machine.Segment transporter = m.segments().get(0);
+        int before = m.footprint().size();
+        int version = m.layoutVersion();
+
+        assertNull(m.segmentWithCartAt(new Pos(0, 63, 1)));
+        m.setCart(transporter, true);
+        assertTrue(m.layoutVersion() > version, "the block index must be refreshed");
+        assertEquals(before + 1, m.footprint().size());
+        assertTrue(m.footprint().contains(new Pos(0, 63, 1)));
+        assertEquals(transporter, m.segmentWithCartAt(new Pos(0, 63, 1)));
+
+        m.setCart(transporter, false);
+        assertEquals(before, m.footprint().size());
+        assertNull(m.segmentWithCartAt(new Pos(0, 63, 1)));
+    }
+
+    @Test
+    void restoredSegmentsKeepTheirCartOnlyOnTransporters() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env);
+        m.restoreSegment(UUID.randomUUID(), SegmentKind.TRANSPORTER, new Pos(0, 64, 1), true);
+        m.restoreSegment(UUID.randomUUID(), SegmentKind.STORAGE, new Pos(0, 64, 2), true);
+        assertTrue(m.segments().get(0).cart());
+        assertFalse(m.segments().get(1).cart(), "only transporters have carts");
+    }
+
+    @Test
+    void theCartFollowsItsTransporterWhenTheWaveReachesIt() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.TRANSPORTER);
+        m.setCart(m.segments().get(0), true);
+        env.fuelUnits = 10;
+        assertTrue(m.powerOn(env));
+
+        env.run(m, 60 + 20);
+        assertEquals(new Pos(0, 64, 0), m.segments().get(0).pos());
+        assertEquals(new Pos(0, 63, 0), m.segments().get(0).cartPos());
+        assertTrue(m.footprint().contains(new Pos(0, 63, 0)));
+        assertFalse(m.footprint().contains(new Pos(0, 63, 1)));
+        assertTrue(m.powered());
+    }
+
+    @Test
+    void aBlockedCartStopsTheWaveBeforeAnythingMoves() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.TRANSPORTER);
+        m.setCart(m.segments().get(0), true);
+        env.solids.add(new Pos(0, 63, 0));
+        env.fuelUnits = 10;
+        assertTrue(m.powerOn(env));
+
+        env.run(m, 60 + 20);
+        assertFalse(m.powered());
+        assertEquals(List.of(Msg.PATH_BLOCKED), env.messages);
+        assertEquals(new Pos(0, 64, 1), m.segments().get(0).pos(), "the transporter stayed where it was");
+        assertEquals("segment:TRANSPORTER", env.placed.get(new Pos(0, 64, 1)));
+    }
 }
