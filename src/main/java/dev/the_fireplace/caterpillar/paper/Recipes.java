@@ -74,10 +74,10 @@ public final class Recipes {
         seat.setIngredient('d', segment);
         Bukkit.addRecipe(seat);
 
-        // Transporter:  c d c /  h    (c = chain, h = hopper)
+        // Transporter:  c d c /  h    (c = iron chain, h = hopper)
         ShapedRecipe transporter = shaped(plugin, keys, PartType.TRANSPORTER);
         transporter.shape("cdc", " h ");
-        transporter.setIngredient('c', Material.CHAIN);
+        transporter.setIngredient('c', Material.IRON_CHAIN);
         transporter.setIngredient('d', segment);
         transporter.setIngredient('h', Material.HOPPER);
         Bukkit.addRecipe(transporter);
