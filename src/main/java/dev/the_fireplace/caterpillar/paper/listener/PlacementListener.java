@@ -10,6 +10,7 @@ import dev.the_fireplace.caterpillar.paper.PartType;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -58,18 +59,29 @@ public final class PlacementListener implements Listener {
         // Bukkit has already put the item's block into the world while this event runs, so the clicked position
         // has to be judged by what was there before.
         BlockState replaced = event.getBlockReplacedState();
-        boolean built = switch (type) {
+        BooleanSupplier build = switch (type) {
             case DRILL_HEAD -> placeHead(player, pos, replaced);
             case DRILL_BASE -> placeSegment(player, pos, replaced, event.getBlockAgainst());
         };
-
-        if (built && player.getGameMode() != GameMode.CREATIVE) {
-            consume(player, event.getHand());
+        if (build == null) {
+            return;
         }
+
+        // The event is cancelled, and when it returns Bukkit restores the clicked block to what it was. Building
+        // here would be wiped again, so the blocks are placed on the next tick instead.
+        EquipmentSlot hand = event.getHand();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            if (build.getAsBoolean() && player.getGameMode() != GameMode.CREATIVE) {
+                consume(player, hand);
+            }
+        });
     }
 
     /** {@code pos} is the bottom-centre block of the 3x3 cutting face; the base sits behind its middle. */
-    private boolean placeHead(Player player, Pos pos, BlockState replaced) {
+    private BooleanSupplier placeHead(Player player, Pos pos, BlockState replaced) {
         World world = player.getWorld();
         Facing facing = Facing.fromYaw(player.getLocation().getYaw());
         Pos center = pos.add(0, 1, 0);
@@ -77,18 +89,26 @@ public final class PlacementListener implements Listener {
 
         if (pos.y() < world.getMinHeight() || center.y() + 1 >= world.getMaxHeight()) {
             player.sendActionBar(plugin.lang().get("msg.place.height"));
-            return false;
+            return null;
         }
 
         List<HeadCell> cells = Machine.headCells(base, facing);
         for (HeadCell cell : cells) {
             if (!spaceIsFree(player, world, cell.pos(), replaced)) {
-                return false;
+                return null;
             }
         }
 
-        plugin.manager().create(player, world, facing, base);
-        return true;
+        return () -> {
+            for (HeadCell cell : cells) {
+                if (plugin.manager().isPart(world.getUID(), cell.pos())) {
+                    player.sendActionBar(plugin.lang().get("msg.place.overlap"));
+                    return false;
+                }
+            }
+            plugin.manager().create(player, world, facing, base);
+            return true;
+        };
     }
 
     /**
@@ -96,7 +116,7 @@ public final class PlacementListener implements Listener {
      * that exact block: clicking any part of the caterpillar, or a block next to the attach spot (the ground
      * behind it, say), snaps the segment to the correct position.
      */
-    private boolean placeSegment(Player player, Pos clicked, BlockState replaced, Block against) {
+    private BooleanSupplier placeSegment(Player player, Pos clicked, BlockState replaced, Block against) {
         World world = player.getWorld();
         UUID worldId = world.getUID();
 
@@ -111,11 +131,11 @@ public final class PlacementListener implements Listener {
         }
         if (target == null) {
             player.sendActionBar(plugin.lang().get("msg.place.not-behind"));
-            return false;
+            return null;
         }
         if (!plugin.manager().canAccess(player, target)) {
             player.sendActionBar(plugin.lang().get("msg.not-owner"));
-            return false;
+            return null;
         }
 
         Pos pos = target.nextSegmentPos();
@@ -127,14 +147,23 @@ public final class PlacementListener implements Listener {
                 default -> "msg.place.not-behind";
             };
             player.sendActionBar(plugin.lang().get(key));
-            return false;
+            return null;
         }
         if (!spaceIsFree(player, world, pos, replaced)) {
-            return false;
+            return null;
         }
 
-        plugin.manager().attachSegment(target, SegmentKind.SPACER, pos);
-        return true;
+        Machine machine = target;
+        return () -> {
+            if (plugin.manager().get(machine.id()) == null
+                    || machine.attachProblem(pos, plugin.settings().maxSegments) != null
+                    || plugin.manager().isPart(worldId, pos)) {
+                player.sendActionBar(plugin.lang().get("msg.place.not-behind"));
+                return false;
+            }
+            plugin.manager().attachSegment(machine, SegmentKind.SPACER, pos);
+            return true;
+        };
     }
 
     private static boolean isNear(Pos spot, Pos clicked) {
