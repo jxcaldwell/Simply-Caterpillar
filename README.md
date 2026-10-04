@@ -10,14 +10,14 @@ original models and textures in [`resourcepack`](resourcepack) for a later resou
 
 **Target:** Paper 26.2, Java 25.
 
-## Status: milestone 3
+## Status: milestone 4
 
 | Part | Status |
 |---|---|
 | Drill head, basic drill segment, fuel, power button, drilling, movement | done |
 | Storage, item collector, incinerator, drill seat | done |
-| Transporter | done (this milestone) |
-| Reinforcement builder, decoration placer | planned (milestone 4) |
+| Transporter | done |
+| Reinforcement builder, decoration placer | done (this milestone) |
 | Optional resource pack with the original models | planned (milestone 5) |
 
 ## How to play
@@ -40,6 +40,8 @@ Craft each one from a Basic Drill Segment and place it behind the head like any 
 | Collector Segment | segment above a hopper | Picks up dropped items within 3 blocks of itself every half second while the caterpillar runs, and right after the drill breaks blocks. Put it directly behind the head. |
 | Incinerator Segment | furnace, segment, lava bucket (top to bottom) | Right-click it to choose which item types it destroys in the gathered slots. Starts with gravel, sand, red sand, cobblestone and dirt. Click an item type to remove it; click with an item on the cursor to add it. |
 | Transporter Segment | chain, segment, chain over a hopper (`c d c` / ` h `) | Hangs a chest minecart block under itself, moves full stacks of gathered items into it and sends it off as a real chest minecart when every slot is a full stack. See below. |
+| Reinforcement Builder | pistons on all four sides of a segment (` p ` / `pdp` / ` p `) | Lines the ring of blocks just outside the tunnel (ceiling and floor 5 wide, walls 3 high) from two blocks ahead to two behind, every time it moves. Right-click to pick the block for each position and, per side, what may be replaced: water, lava, falling blocks, air/plants, or everything. Defaults (original mod): cobblestone; seal water and lava everywhere, support falling ceilings, fill floor gaps. |
+| Decoration Placer | dispenser, segment, dispenser | Places one of ten patterns in the tunnel slice it has just left, moving to the next pattern each block. Each pattern is the 8 blocks around the middle of the slice. Default is the original "mineshaft": a rail line, a plank-and-fence frame every 10 blocks, wall torches and a powered rail with its redstone torch. Torches go on the wall when they can't stand. |
 | Drill Seat | cauldron above a segment | Right-click to sit and ride along; anyone may use it. Sneak or jump to get off. |
 
 **Transporter details.** Put chest minecarts in the drill head's (or a storage segment's) *consumption* slots; the
@@ -47,6 +49,11 @@ transporter takes one when it has none. It needs free space below itself (the bo
 there is remembered and put back when the cart moves on. The cart block can be opened like the transporter itself
 to see its cargo. When the cargo is full the block is replaced by a chest minecart; if it was released onto a rail it
 rolls backwards along the track. Breaking the cart block or the transporter returns the minecart and its cargo.
+
+**Consumption slots.** Reinforcement and decoration blocks, and the transporter's chest minecarts, are taken from the
+consumption slots (middle row) of the drill head first and then of each storage segment. If the block is not there,
+that position is skipped. Every placed block is checked against protection plugins as the owner; a block the
+reinforcement builder replaces is broken first, so its drops can be collected.
 
 While powered the drill burns fuel (one unit per tick per part: the longer the caterpillar, the hungrier it is),
 breaks the 3x3 area in front of it every 3 seconds, steps forward, and the segments follow one by one.

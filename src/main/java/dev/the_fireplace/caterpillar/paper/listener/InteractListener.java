@@ -3,7 +3,9 @@ package dev.the_fireplace.caterpillar.paper.listener;
 import dev.the_fireplace.caterpillar.core.Machine;
 import dev.the_fireplace.caterpillar.core.Pos;
 import dev.the_fireplace.caterpillar.core.SegmentKind;
+import dev.the_fireplace.caterpillar.paper.DecorationGui;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
+import dev.the_fireplace.caterpillar.paper.ReinforcementGui;
 import dev.the_fireplace.caterpillar.paper.IncineratorGui;
 import dev.the_fireplace.caterpillar.paper.StorageGui;
 import dev.the_fireplace.caterpillar.paper.TransporterGui;
@@ -94,6 +96,22 @@ public final class InteractListener implements Listener {
             }
         }
 
+        if (segment != null && segment.kind() == SegmentKind.REINFORCEMENT) {
+            ReinforcementGui settings = plugin.manager().reinforcement(segment.id());
+            if (settings != null) {
+                settings.render();
+                player.openInventory(settings.getInventory());
+                return;
+            }
+        }
+        if (segment != null && segment.kind() == SegmentKind.DECORATION) {
+            DecorationGui settings = plugin.manager().decoration(segment.id());
+            if (settings != null) {
+                settings.render();
+                player.openInventory(settings.getInventory());
+                return;
+            }
+        }
         if (segment != null && segment.kind() == SegmentKind.TRANSPORTER) {
             TransporterGui cargo = plugin.manager().transporter(segment.id());
             if (cargo != null) {

@@ -37,6 +37,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -61,6 +62,9 @@ public final class CaterpillarManager {
     private final Map<UUID, StorageGui> storages = new HashMap<>();
     private final Map<UUID, IncineratorGui> incinerators = new HashMap<>();
     private final Map<UUID, TransporterGui> transporters = new HashMap<>();
+    private final Map<UUID, ReinforcementGui> reinforcements = new HashMap<>();
+    private final Map<UUID, DecorationGui> decorations = new HashMap<>();
+    private final Builders builders;
     private final Seats seats;
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
@@ -75,6 +79,7 @@ public final class CaterpillarManager {
     public CaterpillarManager(SimplyCaterpillarPlugin plugin) {
         this.plugin = plugin;
         this.seats = new Seats(plugin);
+        this.builders = new Builders(plugin);
     }
 
     // ---------------------------------------------------------------- lookups
@@ -101,6 +106,18 @@ public final class CaterpillarManager {
 
     public TransporterGui transporter(UUID segmentId) {
         return transporters.get(segmentId);
+    }
+
+    public ReinforcementGui reinforcement(UUID segmentId) {
+        return reinforcements.get(segmentId);
+    }
+
+    public DecorationGui decoration(UUID segmentId) {
+        return decorations.get(segmentId);
+    }
+
+    public Builders builders() {
+        return builders;
     }
 
     public Seats seats() {
@@ -384,6 +401,14 @@ public final class CaterpillarManager {
         if (filter != null) {
             filter.fillDefaults();
         }
+        ReinforcementGui reinforcement = reinforcements.get(segment.id());
+        if (reinforcement != null) {
+            reinforcement.fillDefaults();
+        }
+        DecorationGui decoration = decorations.get(segment.id());
+        if (decoration != null) {
+            decoration.fillDefaults();
+        }
         reindex(machine);
         dirty = true;
     }
@@ -396,6 +421,10 @@ public final class CaterpillarManager {
                     incinerators.put(segment.id(), new IncineratorGui(machine.id(), segment.id(), plugin.lang()));
             case TRANSPORTER ->
                     transporters.put(segment.id(), new TransporterGui(machine.id(), segment.id(), plugin.lang()));
+            case REINFORCEMENT ->
+                    reinforcements.put(segment.id(), new ReinforcementGui(machine.id(), segment.id(), plugin.lang()));
+            case DECORATION ->
+                    decorations.put(segment.id(), new DecorationGui(machine.id(), segment.id(), plugin.lang()));
             default -> { }
         }
     }
@@ -437,6 +466,14 @@ public final class CaterpillarManager {
         if (incinerator != null) {
             for (HumanEntity viewer : new ArrayList<>(incinerator.getInventory().getViewers())) {
                 viewer.closeInventory();
+            }
+        }
+        for (InventoryHolder settings : new InventoryHolder[] {
+                reinforcements.remove(segment.id()), decorations.remove(segment.id())}) {
+            if (settings != null) {
+                for (HumanEntity viewer : new ArrayList<>(settings.getInventory().getViewers())) {
+                    viewer.closeInventory();
+                }
             }
         }
         seats.remove(segment.id());
@@ -619,6 +656,38 @@ public final class CaterpillarManager {
                 if (incinerator != null) {
                     entry.put("filter", encode(incinerator.getInventory(), 0, IncineratorGui.SIZE - 1));
                 }
+                ReinforcementGui reinforcement = reinforcements.get(segment.id());
+                if (reinforcement != null) {
+                    List<String> pattern = new ArrayList<>();
+                    for (int i = 0; i < ReinforcementGui.POSITIONS; i++) {
+                        pattern.add(name(reinforcement.material(i)));
+                    }
+                    entry.put("pattern", pattern);
+                    Map<String, List<String>> replace = new LinkedHashMap<>();
+                    for (ReinforcementGui.Side side : ReinforcementGui.Side.values()) {
+                        List<String> on = new ArrayList<>();
+                        for (ReinforcementGui.Replace what : ReinforcementGui.Replace.values()) {
+                            if (reinforcement.replaces(side, what)) {
+                                on.add(what.name());
+                            }
+                        }
+                        replace.put(side.name(), on);
+                    }
+                    entry.put("replace", replace);
+                }
+                DecorationGui decoration = decorations.get(segment.id());
+                if (decoration != null) {
+                    List<List<String>> patterns = new ArrayList<>();
+                    for (int p = 0; p < DecorationGui.PATTERNS; p++) {
+                        List<String> row = new ArrayList<>();
+                        for (int i = 0; i < DecorationGui.POSITIONS; i++) {
+                            row.add(name(decoration.material(p, i)));
+                        }
+                        patterns.add(row);
+                    }
+                    entry.put("patterns", patterns);
+                    entry.put("current-pattern", decoration.current());
+                }
                 TransporterGui transporter = transporters.get(segment.id());
                 if (transporter != null) {
                     entry.put("cart", segment.cart());
@@ -720,6 +789,40 @@ public final class CaterpillarManager {
                 machine.restoreSegment(segmentId, kind, pos((List<?>) entry.get("pos")), cart);
                 Machine.Segment restored = machine.segments().get(machine.segments().size() - 1);
                 createSegmentData(machine, restored);
+                ReinforcementGui restoredReinforcement = reinforcements.get(segmentId);
+                if (restoredReinforcement != null) {
+                    if (entry.get("pattern") instanceof List<?> savedPattern) {
+                        for (int i = 0; i < Math.min(savedPattern.size(), ReinforcementGui.POSITIONS); i++) {
+                            restoredReinforcement.setMaterial(i, material(savedPattern.get(i)));
+                        }
+                    }
+                    if (entry.get("replace") instanceof Map<?, ?> savedReplace) {
+                        for (ReinforcementGui.Side side : ReinforcementGui.Side.values()) {
+                            Object on = savedReplace.get(side.name());
+                            for (ReinforcementGui.Replace what : ReinforcementGui.Replace.values()) {
+                                restoredReinforcement.set(side, what,
+                                        on instanceof List<?> list && list.contains(what.name()));
+                            }
+                        }
+                    }
+                    restoredReinforcement.render();
+                }
+                DecorationGui restoredDecoration = decorations.get(segmentId);
+                if (restoredDecoration != null) {
+                    if (entry.get("patterns") instanceof List<?> savedPatterns) {
+                        for (int p = 0; p < Math.min(savedPatterns.size(), DecorationGui.PATTERNS); p++) {
+                            if (savedPatterns.get(p) instanceof List<?> row) {
+                                for (int i = 0; i < Math.min(row.size(), DecorationGui.POSITIONS); i++) {
+                                    restoredDecoration.setMaterial(p, i, material(row.get(i)));
+                                }
+                            }
+                        }
+                    }
+                    if (entry.get("current-pattern") instanceof Number number) {
+                        restoredDecoration.setCurrent(number.intValue());
+                    }
+                    restoredDecoration.render();
+                }
                 TransporterGui restoredTransporter = transporters.get(segmentId);
                 if (restoredTransporter != null) {
                     if (entry.get("previous") != null) {
@@ -795,6 +898,14 @@ public final class CaterpillarManager {
                         "Skipping an unreadable item in caterpillar " + machineId + " segment slot " + item.getKey(), ex);
             }
         }
+    }
+
+    private static String name(Material material) {
+        return material == null ? "" : material.name();
+    }
+
+    private static Material material(Object name) {
+        return name == null || String.valueOf(name).isEmpty() ? null : Material.matchMaterial(String.valueOf(name));
     }
 
     private static List<Integer> coords(Pos pos) {

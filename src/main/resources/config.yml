@@ -45,6 +45,8 @@ blocks:
   transporter: CYAN_CONCRETE
   # The block shown under a transporter while it carries a chest minecart.
   transporter-cart: BROWN_TERRACOTTA
+  reinforcement: CHISELED_STONE_BRICKS
+  decoration: CHISELED_SANDSTONE
 
 collector:
   # How far from the collector segment (in blocks, measured from its faces) dropped items are picked up.

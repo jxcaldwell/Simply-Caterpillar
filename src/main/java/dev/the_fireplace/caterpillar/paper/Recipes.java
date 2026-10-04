@@ -82,6 +82,20 @@ public final class Recipes {
         transporter.setIngredient('h', Material.HOPPER);
         Bukkit.addRecipe(transporter);
 
+        // Reinforcement builder:   p  / p d p /  p    (p = piston)
+        ShapedRecipe reinforcement = shaped(plugin, keys, PartType.REINFORCEMENT);
+        reinforcement.shape(" p ", "pdp", " p ");
+        reinforcement.setIngredient('p', Material.PISTON);
+        reinforcement.setIngredient('d', segment);
+        Bukkit.addRecipe(reinforcement);
+
+        // Decoration placer:  b d b   (b = dispenser)
+        ShapedRecipe decoration = shaped(plugin, keys, PartType.DECORATION);
+        decoration.shape("bdb");
+        decoration.setIngredient('b', Material.DISPENSER);
+        decoration.setIngredient('d', segment);
+        Bukkit.addRecipe(decoration);
+
         return keys;
     }
 

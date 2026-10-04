@@ -10,7 +10,9 @@ public enum PartType {
     COLLECTOR("collector", SegmentKind.COLLECTOR),
     INCINERATOR("incinerator", SegmentKind.INCINERATOR),
     DRILL_SEAT("drill_seat", SegmentKind.SEAT),
-    TRANSPORTER("transporter", SegmentKind.TRANSPORTER);
+    TRANSPORTER("transporter", SegmentKind.TRANSPORTER),
+    REINFORCEMENT("reinforcement", SegmentKind.REINFORCEMENT),
+    DECORATION("decoration", SegmentKind.DECORATION);
 
     public final String id;
     /** The kind of segment this part becomes when placed behind a head; null for the head itself. */

@@ -219,6 +219,8 @@ public final class PaperEnv implements Env {
         switch (segment.kind()) {
             case SEAT -> plugin.manager().seats().follow(machine, segment);
             case TRANSPORTER -> plugin.manager().moveCart(machine, segment);
+            case REINFORCEMENT -> plugin.manager().builders().reinforce(machine, segment);
+            case DECORATION -> plugin.manager().builders().decorate(machine, segment);
             default -> { }
         }
     }

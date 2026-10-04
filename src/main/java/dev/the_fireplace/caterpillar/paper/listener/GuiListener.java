@@ -1,7 +1,9 @@
 package dev.the_fireplace.caterpillar.paper.listener;
 
 import dev.the_fireplace.caterpillar.core.Machine;
+import dev.the_fireplace.caterpillar.paper.DecorationGui;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
+import dev.the_fireplace.caterpillar.paper.ReinforcementGui;
 import dev.the_fireplace.caterpillar.paper.IncineratorGui;
 import dev.the_fireplace.caterpillar.paper.StorageGui;
 import dev.the_fireplace.caterpillar.paper.TransporterGui;
@@ -34,7 +36,9 @@ public final class GuiListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
         Inventory top = event.getView().getTopInventory();
-        if (top.getHolder() instanceof StorageGui storage) {
+        if (top.getHolder() instanceof ReinforcementGui || top.getHolder() instanceof DecorationGui) {
+            clickSettings(event, top);
+        } else if (top.getHolder() instanceof StorageGui storage) {
             clickStorage(event, storage);
         } else if (top.getHolder() instanceof IncineratorGui filter) {
             clickIncinerator(event, filter);
@@ -67,6 +71,21 @@ public final class GuiListener implements Listener {
             }
         }
         plugin.manager().markDirty();
+    }
+
+    /** Reinforcement and decoration settings are pure buttons and "ghost" slots: nothing is moved in or out. */
+    private void clickSettings(InventoryClickEvent event, Inventory top) {
+        event.setCancelled(true);
+        int raw = event.getRawSlot();
+        if (raw < 0 || raw >= top.getSize()) {
+            return;
+        }
+        boolean changed = top.getHolder() instanceof ReinforcementGui reinforcement
+                ? reinforcement.click(raw, event.getCursor())
+                : ((DecorationGui) top.getHolder()).click(raw, event.getCursor());
+        if (changed) {
+            plugin.manager().markDirty();
+        }
     }
 
     /** The incinerator filter is a list of item types: nothing is ever moved in or out of it. */
@@ -175,7 +194,7 @@ public final class GuiListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
         Object holder = event.getView().getTopInventory().getHolder();
-        if (holder instanceof IncineratorGui) {
+        if (holder instanceof IncineratorGui || holder instanceof ReinforcementGui || holder instanceof DecorationGui) {
             event.setCancelled(true);
             return;
         }

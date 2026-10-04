@@ -13,7 +13,11 @@ public enum SegmentKind {
     /** A seat a player can ride the caterpillar on. */
     SEAT(false),
     /** Carries a chest minecart under itself, fills it with full stacks and releases it when it is full. */
-    TRANSPORTER(true);
+    TRANSPORTER(true),
+    /** Lines the tunnel (ceiling, walls, floor) with chosen blocks as it moves, e.g. to seal off water and lava. */
+    REINFORCEMENT(false),
+    /** Places a repeating pattern of blocks (rails, fences, torches...) in the tunnel it leaves behind. */
+    DECORATION(false);
 
     private final boolean ticks;
 

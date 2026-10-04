@@ -41,8 +41,75 @@ item:
       - "<gray>Carries a chest minecart under itself, fills it with"
       - "<gray>full stacks of gathered items and sends it off when full."
       - "<dark_gray>Put chest minecarts in the drill head's consumption slots."
+  reinforcement:
+    name: "<yellow>Reinforcement Builder"
+    lore:
+      - "<gray>Lines the tunnel's ceiling, walls and floor as it moves,"
+      - "<gray>sealing off water and lava and holding up sand and gravel."
+      - "<dark_gray>Right-click it to choose blocks and what to replace."
+      - "<dark_gray>Uses blocks from the consumption slots."
+  decoration:
+    name: "<yellow>Decoration Placer"
+    lore:
+      - "<gray>Places rails, supports, torches and more in the tunnel"
+      - "<gray>behind it, from ten repeating patterns."
+      - "<dark_gray>Right-click it to edit the patterns."
+      - "<dark_gray>Uses blocks from the consumption slots."
 
 gui:
+  side:
+    ceiling: "Ceiling"
+    left: "Left wall"
+    right: "Right wall"
+    floor: "Floor"
+  side-selected: "<green>Selected: the toggles on the right apply to this side."
+  side-select-hint: "<gray>Click to edit what this side replaces."
+  pattern-set-hint:
+    - "<gray>Click with a block on the cursor to use it here."
+    - "<dark_gray>The block itself is not taken."
+  pattern-clear-hint:
+    - "<gray>Click with an empty hand to clear."
+    - "<gray>Click with another block to change it."
+  reinforcement-title: "<dark_gray>Reinforcement Builder"
+  reinforcement-info-title: "<gold>Tunnel cross-section"
+  reinforcement-info-lore:
+    - "<gray>Seen from behind. The blocks around the dark"
+    - "<gray>3x3 tunnel are placed as the caterpillar moves."
+    - "<gray>Bottom row: pick a side, then choose what"
+    - "<gray>that side may replace."
+    - "<dark_gray>Blocks come from the consumption slots."
+  reinforcement-empty: "<gray><side>: nothing placed here"
+  reinforcement-position: "<gray><side>"
+  replace-on: "<green>Replace <what> on <side>: ON"
+  replace-off: "<red>Replace <what> on <side>: OFF"
+  replace:
+    water: "water"
+    lava: "lava"
+    falling: "falling blocks"
+    air: "air and plants"
+    all: "everything"
+  replace-help:
+    water: ["<gray>Seals off water (sources and flowing)."]
+    lava: ["<gray>Seals off lava (sources and flowing)."]
+    falling: ["<gray>Replaces sand, gravel, concrete powder and other", "<gray>blocks that fall."]
+    air: ["<gray>Fills gaps: air, grass, flowers and other", "<gray>replaceable blocks."]
+    all: ["<gray>Replaces any block that isn't already the chosen one.", "<gray>Broken blocks drop items. Never touches chests,", "<gray>signs or other blocks that hold data, or bedrock."]
+  decoration-title: "<dark_gray>Decoration Placer"
+  decoration-info-title: "<gold>Decoration patterns"
+  decoration-info-lore:
+    - "<gray>Ten patterns, used in turn: one per block moved,"
+    - "<gray>placed in the tunnel slice the placer has just left."
+    - "<gray>The grid is that slice seen from behind; the dark"
+    - "<gray>middle is where the caterpillar itself runs."
+    - "<dark_gray>Blocks come from the consumption slots."
+  decoration-empty: "<gray>Nothing placed here"
+  decoration-previous: "<yellow>Previous pattern"
+  decoration-next: "<yellow>Next pattern"
+  decoration-copy-all: "<yellow>Copy this pattern to all ten"
+  decoration-copy-all-lore: ["<gray>Makes every block of the tunnel the same."]
+  decoration-clear: "<red>Clear this pattern"
+  decoration-pattern: "<gold>Pattern <n> of 10"
+  decoration-next-placed: "<gray>Next placed: pattern <n>"
   transporter-title: "<dark_gray>Transporter Cargo"
   storage-title: "<dark_gray>Storage Segment"
   storage-info-title: "<gold>Storage"
