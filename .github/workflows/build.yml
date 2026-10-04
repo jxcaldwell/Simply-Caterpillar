@@ -19,7 +19,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build and test
-        run: ./gradlew build --no-daemon
+        run: |
+          set +e
+          ./gradlew build --no-daemon > build.log 2>&1
+          status=$?
+          cat build.log
+          if [ $status -ne 0 ]; then
+            # Surface the failure reasons as annotations so they are visible without opening the log.
+            grep -E "error:|warning: \[|FAILED|AssertionFailedError|Exception|What went wrong|Could not" build.log | head -40 \
+              | while IFS= read -r line; do echo "::error::${line}"; done
+          fi
+          exit $status
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4
         with:
