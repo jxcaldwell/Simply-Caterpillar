@@ -60,7 +60,7 @@ public final class PlacementListener implements Listener {
         BlockState replaced = event.getBlockReplacedState();
         boolean built = switch (type) {
             case DRILL_HEAD -> placeHead(player, pos, replaced);
-            case DRILL_BASE -> placeSegment(player, pos, replaced);
+            case DRILL_BASE -> placeSegment(player, pos, replaced, event.getBlockAgainst());
         };
 
         if (built && player.getGameMode() != GameMode.CREATIVE) {
@@ -91,17 +91,22 @@ public final class PlacementListener implements Listener {
         return true;
     }
 
-    /** Segments attach directly behind the last part of an existing caterpillar. */
-    private boolean placeSegment(Player player, Pos pos, BlockState replaced) {
+    /**
+     * Segments attach directly behind the last part of an existing caterpillar. The player does not have to hit
+     * that exact block: clicking any part of the caterpillar, or a block next to the attach spot (the ground
+     * behind it, say), snaps the segment to the correct position.
+     */
+    private boolean placeSegment(Player player, Pos clicked, BlockState replaced, Block against) {
         World world = player.getWorld();
         UUID worldId = world.getUID();
 
-        Machine target = null;
-        for (Facing direction : Facing.values()) {
-            Machine candidate = plugin.manager().at(worldId, pos.relative(direction, 1));
-            if (candidate != null && candidate.nextSegmentPos().equals(pos)) {
-                target = candidate;
-                break;
+        Machine target = plugin.manager().at(against);
+        if (target == null) {
+            for (Machine candidate : plugin.manager().all()) {
+                if (candidate.world().equals(worldId) && isNear(candidate.nextSegmentPos(), clicked)) {
+                    target = candidate;
+                    break;
+                }
             }
         }
         if (target == null) {
@@ -113,6 +118,7 @@ public final class PlacementListener implements Listener {
             return false;
         }
 
+        Pos pos = target.nextSegmentPos();
         String problem = target.attachProblem(pos, plugin.settings().maxSegments);
         if (problem != null) {
             String key = switch (problem) {
@@ -129,6 +135,12 @@ public final class PlacementListener implements Listener {
 
         plugin.manager().attachSegment(target, SegmentKind.SPACER, pos);
         return true;
+    }
+
+    private static boolean isNear(Pos spot, Pos clicked) {
+        return Math.abs(spot.x() - clicked.x()) <= 1
+                && Math.abs(spot.y() - clicked.y()) <= 1
+                && Math.abs(spot.z() - clicked.z()) <= 1;
     }
 
     /** Checks that one block position can be built on, sending the player the reason if not. */
