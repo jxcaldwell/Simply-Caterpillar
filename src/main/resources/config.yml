@@ -53,6 +53,14 @@ collector:
   # Items are collected while the caterpillar is running and right after the drill breaks blocks, so place the
   # collector directly behind the drill head.
   radius: 3.0
+  # Collected items that a part needs (blocks in a reinforcement or decoration pattern, chest minecarts for a
+  # transporter) go to the consumption slots first, until there are this many of that item there. The rest goes to
+  # the gathered slots as usual. 0 turns this off.
+  supply-amount: 64
+
+# When a part runs out of an item it needs, the owner gets a chat message, at most once every this many seconds
+# per item. 0 turns the messages off.
+supply-warning-seconds: 60
 
 seat:
   # Height of the invisible seat above the seat block's floor. Raise or lower it if riders look too high or low.

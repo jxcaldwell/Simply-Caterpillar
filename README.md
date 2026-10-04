@@ -52,7 +52,10 @@ rolls backwards along the track. Breaking the cart block or the transporter retu
 
 **Consumption slots.** Reinforcement and decoration blocks, and the transporter's chest minecarts, are taken from the
 consumption slots (middle row) of the drill head first and then of each storage segment. If the block is not there,
-that position is skipped. Every placed block is checked against protection plugins as the owner; a block the
+that position is skipped and the owner gets a chat message ("out of Rail for the Decoration Placer"), at most
+once a minute per item (`supply-warning-seconds`). When the collector picks up an item that a part uses (a block in a
+reinforcement or decoration pattern, or a chest minecart for a transporter), it goes to the consumption slots first,
+until there are 64 of it there (`collector.supply-amount`); the rest goes to the gathered slots. Every placed block is checked against protection plugins as the owner; a block the
 reinforcement builder replaces is broken first, so its drops can be collected.
 
 While powered the drill burns fuel (one unit per tick per part: the longer the caterpillar, the hungrier it is),

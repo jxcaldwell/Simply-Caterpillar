@@ -69,6 +69,8 @@ public final class CaterpillarManager {
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
     private final Map<UUID, Integer> seenVersion = new HashMap<>();
+    /** Tick of the last "out of supply" message, per caterpillar and item. */
+    private final Map<String, Integer> lastWarning = new HashMap<>();
     /** Saved machines that could not be restored yet (their world is not loaded). Kept so they are never lost. */
     private final Map<String, Map<String, Object>> pending = new LinkedHashMap<>();
 
@@ -260,7 +262,11 @@ public final class CaterpillarManager {
 
         if (!segment.cart()) {
             Pos below = segment.cartPos();
-            if (!plugin.env().cartSpace(machine, below) || !takeConsumption(machine, Material.CHEST_MINECART)) {
+            if (!plugin.env().cartSpace(machine, below)) {
+                return;
+            }
+            if (!takeConsumption(machine, Material.CHEST_MINECART)) {
+                warnShortage(machine, Material.CHEST_MINECART, PartType.TRANSPORTER);
                 return;
             }
             Block block = world.getBlockAt(below.x(), below.y(), below.z());
@@ -491,7 +497,15 @@ public final class CaterpillarManager {
         if (head == null) {
             return stack;
         }
-        ItemStack rest = Slots.add(head.getInventory(), HeadGui.GATHERED_START, HeadGui.GATHERED_END, stack);
+        ItemStack rest = stack;
+        if (plugin.settings().supplyAmount > 0 && neededAsSupply(machine, stack.getType())) {
+            rest = topUpSupply(machine, stack);
+            if (rest == null) {
+                dirty = true;
+                return null;
+            }
+        }
+        rest = Slots.add(head.getInventory(), HeadGui.GATHERED_START, HeadGui.GATHERED_END, rest);
         for (Machine.Segment segment : machine.segments()) {
             if (rest == null) {
                 break;
@@ -503,6 +517,107 @@ public final class CaterpillarManager {
         }
         dirty = true;
         return rest;
+    }
+
+    /** True if one of the machine's parts places or uses this item (reinforcement, decoration, transporter). */
+    private boolean neededAsSupply(Machine machine, Material type) {
+        for (Machine.Segment segment : machine.segments()) {
+            ReinforcementGui reinforcement = reinforcements.get(segment.id());
+            if (reinforcement != null) {
+                for (int i = 0; i < ReinforcementGui.POSITIONS; i++) {
+                    if (reinforcement.material(i) == type) {
+                        return true;
+                    }
+                }
+            }
+            DecorationGui decoration = decorations.get(segment.id());
+            if (decoration != null) {
+                for (int p = 0; p < decoration.cycle(); p++) {
+                    for (int i = 0; i < DecorationGui.POSITIONS; i++) {
+                        if (decoration.material(p, i) == type) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            if (segment.kind() == SegmentKind.TRANSPORTER && type == Material.CHEST_MINECART) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Moves as much of the stack into the consumption slots (head first, then storage segments) as is needed to
+     * bring that item up to the configured supply amount. Returns what is left, or null if all of it went in.
+     */
+    private ItemStack topUpSupply(Machine machine, ItemStack stack) {
+        List<org.bukkit.inventory.Inventory> rows = new ArrayList<>();
+        List<int[]> ranges = new ArrayList<>();
+        HeadGui head = guis.get(machine.id());
+        if (head != null) {
+            rows.add(head.getInventory());
+            ranges.add(new int[] {HeadGui.CONSUMPTION_START, HeadGui.CONSUMPTION_END});
+        }
+        for (Machine.Segment segment : machine.segments()) {
+            StorageGui storage = storages.get(segment.id());
+            if (storage != null) {
+                rows.add(storage.getInventory());
+                ranges.add(new int[] {StorageGui.CONSUMPTION_START, StorageGui.CONSUMPTION_END});
+            }
+        }
+
+        int have = 0;
+        for (int r = 0; r < rows.size(); r++) {
+            for (int slot = ranges.get(r)[0]; slot <= ranges.get(r)[1]; slot++) {
+                ItemStack current = rows.get(r).getItem(slot);
+                if (current != null && current.isSimilar(stack)) {
+                    have += current.getAmount();
+                }
+            }
+        }
+        int wanted = Math.min(stack.getAmount(), plugin.settings().supplyAmount - have);
+        if (wanted <= 0) {
+            return stack;
+        }
+
+        ItemStack toSupply = stack.clone();
+        toSupply.setAmount(wanted);
+        for (int r = 0; r < rows.size() && toSupply != null; r++) {
+            toSupply = Slots.add(rows.get(r), ranges.get(r)[0], ranges.get(r)[1], toSupply);
+        }
+        int supplied = wanted - (toSupply == null ? 0 : toSupply.getAmount());
+        if (supplied >= stack.getAmount()) {
+            return null;
+        }
+        ItemStack rest = stack.clone();
+        rest.setAmount(stack.getAmount() - supplied);
+        return rest;
+    }
+
+    /**
+     * Tells the owner that a part could not find an item it needs in the consumption slots. Each item is reported
+     * at most once per {@code supply-warning-seconds} per caterpillar.
+     */
+    public void warnShortage(Machine machine, Material item, PartType part) {
+        int interval = plugin.settings().supplyWarningSeconds * 20;
+        if (interval <= 0) {
+            return;
+        }
+        String key = machine.id() + ":" + item.name();
+        Integer last = lastWarning.get(key);
+        if (last != null && tickCount - last < interval) {
+            return;
+        }
+        lastWarning.put(key, tickCount);
+        Player owner = Bukkit.getPlayer(machine.owner());
+        if (owner != null) {
+            owner.sendMessage(plugin.lang().get("msg.supply.out",
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("item",
+                            net.kyori.adventure.text.Component.translatable(item.translationKey())),
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("part",
+                            plugin.lang().item("item." + part.id + ".name"))));
+        }
     }
 
     /** Destroys every gathered item of the given types, in the head and in all storage segments. */

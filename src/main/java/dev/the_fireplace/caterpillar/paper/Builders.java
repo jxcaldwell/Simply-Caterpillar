@@ -61,7 +61,7 @@ public final class Builders {
                 Pos pos = segment.pos().offset(facing, forward, upOf(position), rightOf(position));
                 Block block = world.getBlockAt(pos.x(), pos.y(), pos.z());
                 if (needsReinforcement(machine, settings, ReinforcementGui.sideOf(position), block, material)) {
-                    place(machine, owner, block, material, material.createBlockData(), true);
+                    place(machine, owner, block, material, material.createBlockData(), true, PartType.REINFORCEMENT);
                 }
             }
         }
@@ -146,7 +146,7 @@ public final class Builders {
             }
             BlockData data = orient(material, facing, block, right);
             if (data != null) {
-                place(machine, owner, block, material, data, false);
+                place(machine, owner, block, material, data, false, PartType.DECORATION);
             }
         }
     }
@@ -210,12 +210,14 @@ public final class Builders {
      * Places one block if the owner may build there and the caterpillar has the item in its consumption slots. A
      * solid block that is being replaced is broken first so its drops are not lost.
      */
-    private void place(Machine machine, Player owner, Block block, Material item, BlockData data, boolean breakFirst) {
+    private void place(Machine machine, Player owner, Block block, Material item, BlockData data, boolean breakFirst,
+                       PartType part) {
         boolean mustBreak = breakFirst && !block.getType().isAir() && !block.isLiquid() && !block.isReplaceable();
         if (!BuildGuard.canBuild(owner, block) || (mustBreak && !BuildGuard.canBreak(owner, block))) {
             return;
         }
         if (!plugin.manager().takeConsumption(machine, item)) {
+            plugin.manager().warnShortage(machine, item, part);
             return;
         }
         if (mustBreak) {

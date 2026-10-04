@@ -41,6 +41,10 @@ public final class Settings {
     public final double seatYOffset;
     /** How far from a collector (in blocks, measured from its faces) dropped items are picked up. */
     public final double collectorRadius;
+    /** Collected items that a part uses are kept in the consumption slots up to this many (0 = off). */
+    public final int supplyAmount;
+    /** Minimum seconds between two "out of supply" messages for the same item (0 = never warn). */
+    public final int supplyWarningSeconds;
 
     public final Set<Material> unbreakable;
 
@@ -80,6 +84,8 @@ public final class Settings {
 
         seatYOffset = config.getDouble("seat.y-offset", 0.4);
         collectorRadius = Math.max(0.5, Math.min(16, config.getDouble("collector.radius", 3.0)));
+        supplyAmount = Math.max(0, config.getInt("collector.supply-amount", 64));
+        supplyWarningSeconds = Math.max(0, config.getInt("supply-warning-seconds", 60));
 
         Set<Material> blocked = EnumSet.noneOf(Material.class);
         for (String name : config.getStringList("unbreakable-blocks")) {

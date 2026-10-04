@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Collected items that a part uses are put into the consumption slots (up to 64 each); the owner is warned when a part runs out of an item.
 - Decoration placer: adjustable cycle length (1-16 patterns). Fixed: blocks could not be picked up to set reinforcement, decoration or incinerator slots; shift-click now adds a block.
 - Milestone 4: reinforcement builder and decoration placer, using blocks from the consumption slots.
 - Milestone 3: transporter segment that carries and releases chest minecarts full of gathered items.
