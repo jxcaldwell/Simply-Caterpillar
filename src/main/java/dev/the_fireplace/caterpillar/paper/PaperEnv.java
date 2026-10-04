@@ -19,7 +19,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Lightable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -215,9 +214,10 @@ public final class PaperEnv implements Env {
             return;
         }
         Block center = block(world, machine.base().offset(machine.facing(), 1, 0, 0));
-        if (center.getBlockData() instanceof Lightable lightable) {
-            lightable.setLit(drilling);
-            center.setBlockData(lightable, false);
+        // A redstone lamp switches itself off again without power, so the working look is a different block.
+        Material wanted = drilling ? settings().headBitCenterActive : settings().headBitCenter;
+        if (center.getType() != wanted) {
+            center.setBlockData(data(wanted, machine.facing()), false);
         }
     }
 

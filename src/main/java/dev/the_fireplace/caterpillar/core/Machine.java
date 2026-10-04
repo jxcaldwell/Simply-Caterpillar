@@ -437,6 +437,10 @@ public final class Machine {
         for (HeadCell cell : headCells()) {
             env.placeCell(this, cell);
         }
+        if (drillingVisual) {
+            // The new centre block was placed in its idle look; keep showing that the head is working.
+            env.setDrilling(this, true);
+        }
         env.moveSound(this, base);
         layoutVersion++;
 

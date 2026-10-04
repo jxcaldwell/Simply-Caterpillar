@@ -26,6 +26,7 @@ public final class Settings {
     public final Material headBase;
     public final Material headBit;
     public final Material headBitCenter;
+    public final Material headBitCenterActive;
     public final Material spacer;
 
     public final Set<Material> unbreakable;
@@ -53,6 +54,7 @@ public final class Settings {
         headBase = block(config, "blocks.head-base", Material.GRAY_GLAZED_TERRACOTTA, log);
         headBit = block(config, "blocks.head-bit", Material.IRON_BLOCK, log);
         headBitCenter = block(config, "blocks.head-bit-center", Material.REDSTONE_LAMP, log);
+        headBitCenterActive = block(config, "blocks.head-bit-center-active", Material.GLOWSTONE, log);
         spacer = block(config, "blocks.segment-spacer", Material.WAXED_COPPER_BLOCK, log);
 
         Set<Material> blocked = EnumSet.noneOf(Material.class);

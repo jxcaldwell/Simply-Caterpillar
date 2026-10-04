@@ -34,6 +34,8 @@ blocks:
   head-base: GRAY_GLAZED_TERRACOTTA
   head-bit: IRON_BLOCK
   head-bit-center: REDSTONE_LAMP
+  # Shown in place of head-bit-center while the head is drilling (it "lights up").
+  head-bit-center-active: GLOWSTONE
   segment-spacer: WAXED_COPPER_BLOCK
 
 # Blocks the drill treats as unbreakable.
