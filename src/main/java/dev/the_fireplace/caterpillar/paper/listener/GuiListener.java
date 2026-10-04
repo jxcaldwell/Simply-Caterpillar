@@ -2,6 +2,8 @@ package dev.the_fireplace.caterpillar.paper.listener;
 
 import dev.the_fireplace.caterpillar.core.Machine;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
+import dev.the_fireplace.caterpillar.paper.IncineratorGui;
+import dev.the_fireplace.caterpillar.paper.StorageGui;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -31,9 +33,64 @@ public final class GuiListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
         Inventory top = event.getView().getTopInventory();
-        if (!(top.getHolder() instanceof HeadGui gui)) {
+        if (top.getHolder() instanceof StorageGui storage) {
+            clickStorage(event, storage);
+        } else if (top.getHolder() instanceof IncineratorGui filter) {
+            clickIncinerator(event, filter);
+        } else if (top.getHolder() instanceof HeadGui gui) {
+            clickHead(event, gui);
+        }
+    }
+
+    private void clickStorage(InventoryClickEvent event, StorageGui gui) {
+        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+            event.setCancelled(true);
             return;
         }
+        int raw = event.getRawSlot();
+        if (raw < 0) {
+            return;
+        }
+        if (raw < StorageGui.SIZE) {
+            if (!StorageGui.isStorageSlot(raw)) {
+                event.setCancelled(true);
+                return;
+            }
+        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            event.setCancelled(true);
+            ItemStack current = event.getCurrentItem();
+            if (current != null && !current.getType().isAir()) {
+                event.setCurrentItem(gui.insert(current));
+            }
+        }
+        plugin.manager().markDirty();
+    }
+
+    /** The incinerator filter is a list of item types: nothing is ever moved in or out of it. */
+    private void clickIncinerator(InventoryClickEvent event, IncineratorGui gui) {
+        event.setCancelled(true);
+        int raw = event.getRawSlot();
+        if (raw < 0) {
+            return;
+        }
+        if (raw < IncineratorGui.SIZE) {
+            ItemStack cursor = event.getCursor();
+            if (!cursor.getType().isAir()) {
+                gui.set(raw, cursor.getType());
+            } else {
+                gui.getInventory().setItem(raw, null);
+            }
+            plugin.manager().markDirty();
+        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            ItemStack current = event.getCurrentItem();
+            if (current != null && !current.getType().isAir()) {
+                gui.addType(current.getType());
+                plugin.manager().markDirty();
+            }
+        }
+    }
+
+    private void clickHead(InventoryClickEvent event, HeadGui gui) {
         HumanEntity clicker = event.getWhoClicked();
         Machine machine = plugin.manager().get(gui.machineId());
         if (machine == null) {
@@ -114,7 +171,22 @@ public final class GuiListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
-        if (!(event.getView().getTopInventory().getHolder() instanceof HeadGui)) {
+        Object holder = event.getView().getTopInventory().getHolder();
+        if (holder instanceof IncineratorGui) {
+            event.setCancelled(true);
+            return;
+        }
+        if (holder instanceof StorageGui) {
+            for (int raw : event.getRawSlots()) {
+                if (raw < StorageGui.SIZE && !StorageGui.isStorageSlot(raw)) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            plugin.manager().markDirty();
+            return;
+        }
+        if (!(holder instanceof HeadGui)) {
             return;
         }
         for (int raw : event.getRawSlots()) {
@@ -135,7 +207,8 @@ public final class GuiListener implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
-        if (event.getView().getTopInventory().getHolder() instanceof HeadGui) {
+        Object holder = event.getView().getTopInventory().getHolder();
+        if (holder instanceof HeadGui || holder instanceof StorageGui || holder instanceof IncineratorGui) {
             plugin.manager().markDirty();
         }
     }

@@ -559,4 +559,102 @@ class MachineTest {
         assertTrue(m.moving());
         assertEquals(0.5, m.burnFraction(), 1e-9);
     }
+
+    // ------------------------------------------------------------------ segment kinds
+
+    private static Machine mixed(FakeEnv env, SegmentKind... kinds) {
+        Machine m = new Machine(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), Facing.NORTH, BASE,
+                Params.defaults());
+        env.render(m);
+        int i = 1;
+        for (SegmentKind kind : kinds) {
+            m.attachSegment(kind, BASE.relative(Facing.NORTH, -i++), env);
+        }
+        return m;
+    }
+
+    @Test
+    void everySegmentGetsItsOwnStableId() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.STORAGE, SegmentKind.SEAT);
+        UUID first = m.segments().get(0).id();
+        UUID second = m.segments().get(1).id();
+        assertNotNull(first);
+        assertTrue(!first.equals(second));
+        env.fuelUnits = 5;
+        for (Pos p : m.footprint()) {
+            env.solids.remove(p);
+        }
+        m.powerOn(env);
+        env.run(m, 60 + 40);
+        assertEquals(first, m.segments().get(0).id(), "moving does not change a segment's identity");
+        UUID restoredId = UUID.randomUUID();
+        m.restoreSegment(restoredId, SegmentKind.COLLECTOR, BASE.relative(Facing.NORTH, -5));
+        assertEquals(restoredId, m.segments().get(2).id());
+        assertEquals(SegmentKind.COLLECTOR, m.segments().get(2).kind());
+    }
+
+    @Test
+    void onlyTickingKindsGetPeriodicWorkAndOnlyWhileRunning() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.SPACER, SegmentKind.COLLECTOR, SegmentKind.STORAGE,
+                SegmentKind.INCINERATOR, SegmentKind.SEAT);
+        env.fuelUnits = 10;
+
+        env.run(m, 50);
+        assertTrue(env.segmentTicks.isEmpty(), "nothing happens while the machine is off");
+
+        assertTrue(m.powerOn(env));
+        env.run(m, 10);
+        assertEquals(List.of(SegmentKind.COLLECTOR, SegmentKind.INCINERATOR), env.segmentTicks);
+        env.run(m, 10);
+        assertEquals(4, env.segmentTicks.size());
+    }
+
+    @Test
+    void collectorsRunRightAfterTheBlocksBreakAndBeforeTheHeadMovesOn() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.COLLECTOR);
+        env.fillSolid(-3, 63, -6, 3, 66, -2);
+        env.fuelUnits = 10;
+        assertTrue(m.powerOn(env));
+
+        env.run(m, 59);
+        int before = env.segmentTicks.size();
+        assertEquals(5, before, "ticks at 10, 20, 30, 40 and 50");
+        env.run(m, 1);
+        // at tick 60 the periodic round and the post-break round both run
+        assertEquals(before + 2, env.segmentTicks.size());
+        assertFalse(env.broken.isEmpty());
+    }
+
+    @Test
+    void segmentMovedIsReportedWhenAWaveStepsASegmentForward() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.SEAT);
+        UUID seat = m.segments().get(0).id();
+        env.fuelUnits = 10;
+        assertTrue(m.powerOn(env));
+
+        env.run(m, 60);
+        assertTrue(env.moved.isEmpty());
+        env.run(m, 20);
+        assertEquals(List.of(seat + "@0,64,0"), env.moved, "the seat stepped into the old base position");
+        assertEquals(new Pos(0, 64, 0), m.segments().get(0).pos());
+    }
+
+    @Test
+    void anyKindOfSegmentChainsAndAdvancesLikeAPlainOne() {
+        FakeEnv env = new FakeEnv();
+        Machine m = mixed(env, SegmentKind.STORAGE, SegmentKind.COLLECTOR, SegmentKind.INCINERATOR, SegmentKind.SEAT);
+        env.fillSolid(-3, 63, -20, 3, 66, -2);
+        env.fuelUnits = 100;
+        assertTrue(m.powerOn(env));
+        env.run(m, 60 + 4 * 20);
+        assertFalse(m.moving());
+        assertEquals(new Pos(0, 64, -1), m.base());
+        assertEquals(new Pos(0, 64, 0), m.segments().get(0).pos());
+        assertEquals(new Pos(0, 64, 3), m.segments().get(3).pos());
+        assertEquals("segment:SEAT", env.placed.get(new Pos(0, 64, 3)));
+    }
 }

@@ -42,7 +42,47 @@ public final class Recipes {
         Bukkit.addRecipe(head);
         keys.add(headKey);
 
+        // The attachments all start from a Basic Drill Segment (the original mod's recipes).
+        RecipeChoice.ExactChoice segment = new RecipeChoice.ExactChoice(items.create(PartType.DRILL_BASE, 1));
+
+        // Storage:  c d c   (c = chest)
+        ShapedRecipe storage = shaped(plugin, keys, PartType.STORAGE);
+        storage.shape("cdc");
+        storage.setIngredient('c', Material.CHEST);
+        storage.setIngredient('d', segment);
+        Bukkit.addRecipe(storage);
+
+        // Collector:  d / h   (h = hopper)
+        ShapedRecipe collector = shaped(plugin, keys, PartType.COLLECTOR);
+        collector.shape("d", "h");
+        collector.setIngredient('d', segment);
+        collector.setIngredient('h', Material.HOPPER);
+        Bukkit.addRecipe(collector);
+
+        // Incinerator:  f / d / l   (f = furnace, l = lava bucket)
+        ShapedRecipe incinerator = shaped(plugin, keys, PartType.INCINERATOR);
+        incinerator.shape("f", "d", "l");
+        incinerator.setIngredient('f', Material.FURNACE);
+        incinerator.setIngredient('d', segment);
+        incinerator.setIngredient('l', Material.LAVA_BUCKET);
+        Bukkit.addRecipe(incinerator);
+
+        // Drill Seat:  c / d   (c = cauldron)
+        ShapedRecipe seat = shaped(plugin, keys, PartType.DRILL_SEAT);
+        seat.shape("c", "d");
+        seat.setIngredient('c', Material.CAULDRON);
+        seat.setIngredient('d', segment);
+        Bukkit.addRecipe(seat);
+
         return keys;
+    }
+
+    /** Starts the recipe for a part: removes any old copy, records the key and creates the empty recipe. */
+    private static ShapedRecipe shaped(SimplyCaterpillarPlugin plugin, List<NamespacedKey> keys, PartType type) {
+        NamespacedKey key = new NamespacedKey(plugin, type.id);
+        Bukkit.removeRecipe(key);
+        keys.add(key);
+        return new ShapedRecipe(key, plugin.items().create(type, 1));
     }
 
     public static void unregister(List<NamespacedKey> keys) {

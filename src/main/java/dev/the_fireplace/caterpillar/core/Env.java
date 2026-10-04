@@ -37,6 +37,12 @@ public interface Env {
 
     void clear(Machine machine, Pos pos);
 
+    /** A segment has just stepped forward to its new position (already rendered there). */
+    void segmentMoved(Machine machine, Machine.Segment segment);
+
+    /** Periodic work of a segment whose kind {@link SegmentKind#ticks() ticks} (collecting, incinerating). */
+    void segmentTick(Machine machine, Machine.Segment segment);
+
     /** Visual state of the head while it is cutting. */
     void setDrilling(Machine machine, boolean drilling);
 

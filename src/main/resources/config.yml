@@ -37,6 +37,21 @@ blocks:
   # Shown in place of head-bit-center while the head is drilling (it "lights up").
   head-bit-center-active: GLOWSTONE
   segment-spacer: WAXED_COPPER_BLOCK
+  storage: DARK_OAK_PLANKS
+  collector: LAPIS_BLOCK
+  incinerator: RED_NETHER_BRICKS
+  # A stair block looks like a seat; it is turned to face the way the caterpillar travels.
+  seat: QUARTZ_STAIRS
+
+collector:
+  # How far from the collector segment (in blocks, measured from its faces) dropped items are picked up.
+  # Items are collected while the caterpillar is running and right after the drill breaks blocks, so place the
+  # collector directly behind the drill head.
+  radius: 3.0
+
+seat:
+  # Height of the invisible seat above the seat block's floor. Raise or lower it if riders look too high or low.
+  y-offset: 0.4
 
 # Blocks the drill treats as unbreakable.
 unbreakable-blocks:

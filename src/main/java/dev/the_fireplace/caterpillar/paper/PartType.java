@@ -4,13 +4,20 @@ import dev.the_fireplace.caterpillar.core.SegmentKind;
 
 /** The craftable, placeable parts of a caterpillar. */
 public enum PartType {
-    DRILL_HEAD("drill_head"),
-    DRILL_BASE("drill_base");
+    DRILL_HEAD("drill_head", null),
+    DRILL_BASE("drill_base", SegmentKind.SPACER),
+    STORAGE("storage", SegmentKind.STORAGE),
+    COLLECTOR("collector", SegmentKind.COLLECTOR),
+    INCINERATOR("incinerator", SegmentKind.INCINERATOR),
+    DRILL_SEAT("drill_seat", SegmentKind.SEAT);
 
     public final String id;
+    /** The kind of segment this part becomes when placed behind a head; null for the head itself. */
+    public final SegmentKind segmentKind;
 
-    PartType(String id) {
+    PartType(String id, SegmentKind segmentKind) {
         this.id = id;
+        this.segmentKind = segmentKind;
     }
 
     public static PartType fromId(String id) {
@@ -23,8 +30,11 @@ public enum PartType {
     }
 
     public static PartType forSegment(SegmentKind kind) {
-        return switch (kind) {
-            case SPACER -> DRILL_BASE;
-        };
+        for (PartType type : values()) {
+            if (type.segmentKind == kind) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("No part for " + kind);
     }
 }

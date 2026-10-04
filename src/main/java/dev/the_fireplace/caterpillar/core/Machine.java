@@ -23,14 +23,24 @@ import java.util.UUID;
  */
 public final class Machine {
 
+    /** Ticks between two rounds of periodic segment work (collecting items, incinerating). */
+    public static final int SEGMENT_TICK_INTERVAL = 10;
+
     /** A segment trailing behind the head. */
     public static final class Segment {
+        private final UUID id;
         private final SegmentKind kind;
         private Pos pos;
 
-        public Segment(SegmentKind kind, Pos pos) {
+        public Segment(UUID id, SegmentKind kind, Pos pos) {
+            this.id = id;
             this.kind = kind;
             this.pos = pos;
+        }
+
+        /** Stable identity: it survives the segment moving, so per-segment data (inventories, seats) can use it. */
+        public UUID id() {
+            return id;
         }
 
         public SegmentKind kind() {
@@ -57,6 +67,7 @@ public final class Machine {
     private int waveIndex;
     private int drillTimer;
     private int waveTimer;
+    private int segmentTimer;
     private boolean drillingVisual;
     private int layoutVersion;
 
@@ -248,9 +259,13 @@ public final class Machine {
     }
 
     /** Adds a segment without touching the world; used when loading from disk. */
-    public void restoreSegment(SegmentKind kind, Pos pos) {
-        segments.add(new Segment(kind, pos));
+    public void restoreSegment(UUID id, SegmentKind kind, Pos pos) {
+        segments.add(new Segment(id, kind, pos));
         layoutVersion++;
+    }
+
+    public void restoreSegment(SegmentKind kind, Pos pos) {
+        restoreSegment(UUID.randomUUID(), kind, pos);
     }
 
     // ---------------------------------------------------------------- editing the chain
@@ -270,11 +285,12 @@ public final class Machine {
     }
 
     /** Attaches a segment at {@code pos} (which must satisfy {@link #attachProblem}) and renders it. */
-    public void attachSegment(SegmentKind kind, Pos pos, Env env) {
-        Segment segment = new Segment(kind, pos);
+    public Segment attachSegment(SegmentKind kind, Pos pos, Env env) {
+        Segment segment = new Segment(UUID.randomUUID(), kind, pos);
         segments.add(segment);
         layoutVersion++;
         env.placeSegment(this, pos, kind);
+        return segment;
     }
 
     /** Removes the segment at {@code pos} from the chain without touching the world. */
@@ -341,6 +357,11 @@ public final class Machine {
         boolean running = powered && litTime > 0;
         if (running) {
             litTime = Math.max(0, litTime - burnPerTick());
+
+            if (++segmentTimer >= SEGMENT_TICK_INTERVAL) {
+                segmentTimer = 0;
+                tickSegments(env);
+            }
 
             if (moving) {
                 waveTimer++;
@@ -417,6 +438,9 @@ public final class Machine {
             }
         }
 
+        // Let collectors and incinerators deal with the drops straight away, before the head moves on.
+        tickSegments(env);
+
         // Phase 3: step forward if the way is really clear.
         for (Pos target : targets) {
             Terrain terrain = env.terrain(this, target);
@@ -427,6 +451,14 @@ public final class Machine {
         }
 
         shiftHead(env);
+    }
+
+    private void tickSegments(Env env) {
+        for (Segment segment : new ArrayList<>(segments)) {
+            if (segment.kind.ticks()) {
+                env.segmentTick(this, segment);
+            }
+        }
     }
 
     private void shiftHead(Env env) {
@@ -470,6 +502,7 @@ public final class Machine {
         env.clear(this, segment.pos);
         segment.pos = next;
         env.placeSegment(this, next, segment.kind);
+        env.segmentMoved(this, segment);
         env.moveSound(this, next);
         layoutVersion++;
 

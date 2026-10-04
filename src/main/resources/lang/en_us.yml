@@ -13,7 +13,36 @@ item:
       - "<gray>Connects the parts of a caterpillar."
       - "<dark_gray>Place it directly behind the last part."
 
+  storage:
+    name: "<yellow>Storage Segment"
+    lore:
+      - "<gray>Adds nine consumption and nine gathered slots."
+      - "<dark_gray>Right-click it to open its inventory."
+  collector:
+    name: "<yellow>Collector Segment"
+    lore:
+      - "<gray>Picks up dropped items nearby while the drill runs"
+      - "<gray>and stores them in the gathered slots."
+      - "<dark_gray>Place it right behind the drill head."
+  incinerator:
+    name: "<yellow>Incinerator Segment"
+    lore:
+      - "<gray>Destroys unwanted items in the gathered slots."
+      - "<dark_gray>Right-click it to choose which items."
+  drill_seat:
+    name: "<yellow>Drill Seat"
+    lore:
+      - "<gray>Right-click it to ride the caterpillar."
+      - "<dark_gray>It rides along as the caterpillar moves."
+
 gui:
+  storage-title: "<dark_gray>Storage Segment"
+  storage-info-title: "<gold>Storage"
+  storage-info-lore:
+    - "<gray>Middle row: consumption slots."
+    - "<gray>Bottom row: gathered items. A collector fills"
+    - "<gray>these once the drill head's own are full."
+  incinerator-title: "<dark_gray>Incinerator Filter"
   title: "<dark_gray>Drill Head"
   power-on: "<green>Power: On"
   power-on-hint: "<gray>Click to turn off."
@@ -32,6 +61,8 @@ msg:
   powered-off: "<red>Drill is turning off."
   no-fuel: "<red>You need to add a fuel source to power on."
   not-owner: "<red>This caterpillar belongs to someone else."
+  seat:
+    occupied: "<red>Someone is already sitting there."
   no-permission: "<red>You do not have permission to do that."
   # Reasons the machine stopped by itself
   stop:

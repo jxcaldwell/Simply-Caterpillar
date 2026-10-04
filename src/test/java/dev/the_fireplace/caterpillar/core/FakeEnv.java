@@ -17,6 +17,8 @@ final class FakeEnv implements Env {
     final Map<Pos, String> placed = new HashMap<>();
     final List<Msg> messages = new ArrayList<>();
     final List<Pos> broken = new ArrayList<>();
+    final List<String> moved = new ArrayList<>();
+    final List<SegmentKind> segmentTicks = new ArrayList<>();
 
     int fuelUnits = 0;
     int fuelBurnTime = 1600;
@@ -115,6 +117,16 @@ final class FakeEnv implements Env {
     @Override
     public void clear(Machine machine, Pos pos) {
         placed.remove(pos);
+    }
+
+    @Override
+    public void segmentMoved(Machine machine, Machine.Segment segment) {
+        moved.add(segment.id() + "@" + segment.pos().x() + "," + segment.pos().y() + "," + segment.pos().z());
+    }
+
+    @Override
+    public void segmentTick(Machine machine, Machine.Segment segment) {
+        segmentTicks.add(segment.kind());
     }
 
     @Override

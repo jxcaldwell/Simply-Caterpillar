@@ -1,7 +1,11 @@
 package dev.the_fireplace.caterpillar.paper.listener;
 
 import dev.the_fireplace.caterpillar.core.Machine;
+import dev.the_fireplace.caterpillar.core.Pos;
+import dev.the_fireplace.caterpillar.core.SegmentKind;
 import dev.the_fireplace.caterpillar.paper.HeadGui;
+import dev.the_fireplace.caterpillar.paper.IncineratorGui;
+import dev.the_fireplace.caterpillar.paper.StorageGui;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -13,7 +17,10 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-/** Right-clicking any block of a caterpillar opens the drill head's GUI. */
+/**
+ * Right-clicking a caterpillar block opens the drill head's GUI; storage and incinerator segments open their own,
+ * and a seat lets the player sit.
+ */
 public final class InteractListener implements Listener {
 
     private final SimplyCaterpillarPlugin plugin;
@@ -52,9 +59,35 @@ public final class InteractListener implements Listener {
             player.sendActionBar(plugin.lang().get("msg.no-permission"));
             return;
         }
+
+        Pos pos = new Pos(block.getX(), block.getY(), block.getZ());
+        Machine.Segment segment = machine.segmentAt(pos);
+
+        // Anyone may take a seat; everything else is for the owner (or an admin).
+        if (segment != null && segment.kind() == SegmentKind.SEAT) {
+            if (!plugin.manager().seats().sit(player, machine, segment)) {
+                player.sendActionBar(plugin.lang().get("msg.seat.occupied"));
+            }
+            return;
+        }
         if (!plugin.manager().canAccess(player, machine)) {
             player.sendActionBar(plugin.lang().get("msg.not-owner"));
             return;
+        }
+
+        if (segment != null && segment.kind() == SegmentKind.STORAGE) {
+            StorageGui storage = plugin.manager().storage(segment.id());
+            if (storage != null) {
+                player.openInventory(storage.getInventory());
+                return;
+            }
+        }
+        if (segment != null && segment.kind() == SegmentKind.INCINERATOR) {
+            IncineratorGui filter = plugin.manager().incinerator(segment.id());
+            if (filter != null) {
+                player.openInventory(filter.getInventory());
+                return;
+            }
         }
 
         HeadGui gui = plugin.manager().gui(machine.id());

@@ -28,6 +28,15 @@ public final class Settings {
     public final Material headBitCenter;
     public final Material headBitCenterActive;
     public final Material spacer;
+    public final Material storage;
+    public final Material collector;
+    public final Material incinerator;
+    public final Material seat;
+
+    /** Height above the seat block's floor at which the invisible seat entity is placed. */
+    public final double seatYOffset;
+    /** How far from a collector (in blocks, measured from its faces) dropped items are picked up. */
+    public final double collectorRadius;
 
     public final Set<Material> unbreakable;
 
@@ -56,6 +65,13 @@ public final class Settings {
         headBitCenter = block(config, "blocks.head-bit-center", Material.REDSTONE_LAMP, log);
         headBitCenterActive = block(config, "blocks.head-bit-center-active", Material.GLOWSTONE, log);
         spacer = block(config, "blocks.segment-spacer", Material.WAXED_COPPER_BLOCK, log);
+        storage = block(config, "blocks.storage", Material.DARK_OAK_PLANKS, log);
+        collector = block(config, "blocks.collector", Material.LAPIS_BLOCK, log);
+        incinerator = block(config, "blocks.incinerator", Material.RED_NETHER_BRICKS, log);
+        seat = block(config, "blocks.seat", Material.QUARTZ_STAIRS, log);
+
+        seatYOffset = config.getDouble("seat.y-offset", 0.4);
+        collectorRadius = Math.max(0.5, Math.min(16, config.getDouble("collector.radius", 3.0)));
 
         Set<Material> blocked = EnumSet.noneOf(Material.class);
         for (String name : config.getStringList("unbreakable-blocks")) {
@@ -67,6 +83,18 @@ public final class Settings {
             }
         }
         unbreakable = blocked;
+    }
+
+    /** The block that represents a part in the world and as an item. */
+    public Material partMaterial(PartType type) {
+        return switch (type) {
+            case DRILL_HEAD -> headBase;
+            case DRILL_BASE -> spacer;
+            case STORAGE -> storage;
+            case COLLECTOR -> collector;
+            case INCINERATOR -> incinerator;
+            case DRILL_SEAT -> seat;
+        };
     }
 
     public Params params() {

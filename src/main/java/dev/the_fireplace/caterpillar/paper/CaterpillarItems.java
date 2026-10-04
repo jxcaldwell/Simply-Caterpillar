@@ -1,6 +1,5 @@
 package dev.the_fireplace.caterpillar.paper;
 
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -24,11 +23,7 @@ public final class CaterpillarItems {
     }
 
     public ItemStack create(PartType type, int amount) {
-        Material material = switch (type) {
-            case DRILL_HEAD -> settings.headBase;
-            case DRILL_BASE -> settings.spacer;
-        };
-        ItemStack stack = new ItemStack(material, amount);
+        ItemStack stack = new ItemStack(settings.partMaterial(type), amount);
         ItemMeta meta = stack.getItemMeta();
         meta.displayName(lang.item("item." + type.id + ".name"));
         meta.lore(lang.itemList("item." + type.id + ".lore"));

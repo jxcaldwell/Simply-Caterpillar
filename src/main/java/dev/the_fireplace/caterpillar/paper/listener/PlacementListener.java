@@ -59,10 +59,9 @@ public final class PlacementListener implements Listener {
         // Bukkit has already put the item's block into the world while this event runs, so the clicked position
         // has to be judged by what was there before.
         BlockState replaced = event.getBlockReplacedState();
-        BooleanSupplier build = switch (type) {
-            case DRILL_HEAD -> placeHead(player, pos, replaced);
-            case DRILL_BASE -> placeSegment(player, pos, replaced, event.getBlockAgainst());
-        };
+        BooleanSupplier build = type == PartType.DRILL_HEAD
+                ? placeHead(player, pos, replaced)
+                : placeSegment(player, pos, replaced, event.getBlockAgainst(), type.segmentKind);
         if (build == null) {
             return;
         }
@@ -116,7 +115,8 @@ public final class PlacementListener implements Listener {
      * that exact block: clicking any part of the caterpillar, or a block next to the attach spot (the ground
      * behind it, say), snaps the segment to the correct position.
      */
-    private BooleanSupplier placeSegment(Player player, Pos clicked, BlockState replaced, Block against) {
+    private BooleanSupplier placeSegment(Player player, Pos clicked, BlockState replaced, Block against,
+                                         SegmentKind kind) {
         World world = player.getWorld();
         UUID worldId = world.getUID();
 
@@ -161,7 +161,7 @@ public final class PlacementListener implements Listener {
                 player.sendActionBar(plugin.lang().get("msg.place.not-behind"));
                 return false;
             }
-            plugin.manager().attachSegment(machine, SegmentKind.SPACER, pos);
+            plugin.manager().attachSegment(machine, kind, pos);
             return true;
         };
     }

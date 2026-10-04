@@ -3,7 +3,10 @@ plugins {
 }
 
 group = "dev.the_fireplace.caterpillar"
-version = "0.1.0"
+// CI builds carry the short commit id (SimplyCaterpillar-0.2.0-ab12cd3.jar), so it is always clear which build is
+// installed on a server.
+val commit = System.getenv("GITHUB_SHA")?.take(7)
+version = if (commit != null) "0.2.0-$commit" else "0.2.0-dev"
 
 base {
     archivesName.set("SimplyCaterpillar")

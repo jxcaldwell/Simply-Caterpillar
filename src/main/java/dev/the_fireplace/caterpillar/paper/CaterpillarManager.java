@@ -53,6 +53,10 @@ public final class CaterpillarManager {
     private final SimplyCaterpillarPlugin plugin;
     private final Map<UUID, Machine> machines = new LinkedHashMap<>();
     private final Map<UUID, HeadGui> guis = new HashMap<>();
+    /** Per-segment data, keyed by segment id. */
+    private final Map<UUID, StorageGui> storages = new HashMap<>();
+    private final Map<UUID, IncineratorGui> incinerators = new HashMap<>();
+    private final Seats seats;
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
     private final Map<UUID, Integer> seenVersion = new HashMap<>();
@@ -65,6 +69,7 @@ public final class CaterpillarManager {
 
     public CaterpillarManager(SimplyCaterpillarPlugin plugin) {
         this.plugin = plugin;
+        this.seats = new Seats(plugin);
     }
 
     // ---------------------------------------------------------------- lookups
@@ -79,6 +84,18 @@ public final class CaterpillarManager {
 
     public HeadGui gui(UUID machineId) {
         return guis.get(machineId);
+    }
+
+    public StorageGui storage(UUID segmentId) {
+        return storages.get(segmentId);
+    }
+
+    public IncineratorGui incinerator(UUID segmentId) {
+        return incinerators.get(segmentId);
+    }
+
+    public Seats seats() {
+        return seats;
     }
 
     public Machine at(UUID world, Pos pos) {
@@ -113,6 +130,7 @@ public final class CaterpillarManager {
             task.cancel();
             task = null;
         }
+        seats.removeAll();
     }
 
     /** Applies configuration changes (tunables) to every running machine. */
@@ -149,6 +167,10 @@ public final class CaterpillarManager {
             }
         }
 
+        if (tickCount % 5 == 0) {
+            seats.cleanup();
+        }
+
         if (tickCount % GUI_REFRESH_TICKS == 0) {
             for (Map.Entry<UUID, HeadGui> entry : guis.entrySet()) {
                 Machine machine = machines.get(entry.getKey());
@@ -181,9 +203,93 @@ public final class CaterpillarManager {
     }
 
     public void attachSegment(Machine machine, SegmentKind kind, Pos pos) {
-        machine.attachSegment(kind, pos, plugin.env());
+        Machine.Segment segment = machine.attachSegment(kind, pos, plugin.env());
+        createSegmentData(machine, segment);
+        IncineratorGui filter = incinerators.get(segment.id());
+        if (filter != null) {
+            filter.fillDefaults();
+        }
         reindex(machine);
         dirty = true;
+    }
+
+    /** Creates the inventory a segment of this kind needs (storage contents, incinerator filter). */
+    private void createSegmentData(Machine machine, Machine.Segment segment) {
+        switch (segment.kind()) {
+            case STORAGE -> storages.put(segment.id(), new StorageGui(machine.id(), segment.id(), plugin.lang()));
+            case INCINERATOR ->
+                    incinerators.put(segment.id(), new IncineratorGui(machine.id(), segment.id(), plugin.lang()));
+            default -> { }
+        }
+    }
+
+    /** Closes the GUI of a segment, returns what it stored, and forgets its per-segment data. */
+    private List<ItemStack> releaseSegmentData(Machine.Segment segment) {
+        List<ItemStack> contents = new ArrayList<>();
+        StorageGui storage = storages.remove(segment.id());
+        if (storage != null) {
+            for (HumanEntity viewer : new ArrayList<>(storage.getInventory().getViewers())) {
+                viewer.closeInventory();
+            }
+            for (int slot = StorageGui.CONSUMPTION_START; slot <= StorageGui.GATHERED_END; slot++) {
+                ItemStack stack = storage.getInventory().getItem(slot);
+                if (stack != null && !stack.getType().isAir()) {
+                    contents.add(stack);
+                }
+            }
+        }
+        IncineratorGui incinerator = incinerators.remove(segment.id());
+        if (incinerator != null) {
+            for (HumanEntity viewer : new ArrayList<>(incinerator.getInventory().getViewers())) {
+                viewer.closeInventory();
+            }
+        }
+        seats.remove(segment.id());
+        return contents;
+    }
+
+    // ---------------------------------------------------------------- gathered items
+
+    /**
+     * Puts collected items into the caterpillar's gathered slots: the drill head first, then the storage segments
+     * in order. Returns what did not fit, or null if everything was stored.
+     */
+    public ItemStack depositGathered(Machine machine, ItemStack stack) {
+        HeadGui head = guis.get(machine.id());
+        if (head == null) {
+            return stack;
+        }
+        ItemStack rest = Slots.add(head.getInventory(), HeadGui.GATHERED_START, HeadGui.GATHERED_END, stack);
+        for (Machine.Segment segment : machine.segments()) {
+            if (rest == null) {
+                break;
+            }
+            StorageGui storage = storages.get(segment.id());
+            if (storage != null) {
+                rest = Slots.add(storage.getInventory(), StorageGui.GATHERED_START, StorageGui.GATHERED_END, rest);
+            }
+        }
+        dirty = true;
+        return rest;
+    }
+
+    /** Destroys every gathered item of the given types, in the head and in all storage segments. */
+    public void incinerateGathered(Machine machine, java.util.Set<org.bukkit.Material> types) {
+        HeadGui head = guis.get(machine.id());
+        int removed = 0;
+        if (head != null) {
+            removed += Slots.removeMatching(head.getInventory(), HeadGui.GATHERED_START, HeadGui.GATHERED_END, types);
+        }
+        for (Machine.Segment segment : machine.segments()) {
+            StorageGui storage = storages.get(segment.id());
+            if (storage != null) {
+                removed += Slots.removeMatching(storage.getInventory(), StorageGui.GATHERED_START,
+                        StorageGui.GATHERED_END, types);
+            }
+        }
+        if (removed > 0) {
+            dirty = true;
+        }
     }
 
     /** Removes one segment from the chain and the world, optionally dropping it as an item. */
@@ -195,6 +301,9 @@ public final class CaterpillarManager {
         plugin.env().clear(machine, pos);
         reindex(machine);
         dirty = true;
+        for (ItemStack stored : releaseSegmentData(segment)) {
+            drop(dropAt, stored);
+        }
         if (dropPart) {
             drop(dropAt, plugin.items().create(PartType.forSegment(segment.kind()), 1));
         }
@@ -211,6 +320,9 @@ public final class CaterpillarManager {
             for (Machine.Segment segment : machine.segments()) {
                 drops.add(plugin.items().create(PartType.forSegment(segment.kind()), 1));
             }
+        }
+        for (Machine.Segment segment : machine.segments()) {
+            drops.addAll(releaseSegmentData(segment));
         }
 
         HeadGui gui = guis.remove(machine.id());
@@ -296,8 +408,18 @@ public final class CaterpillarManager {
             List<Map<String, Object>> segments = new ArrayList<>();
             for (Machine.Segment segment : machine.segments()) {
                 Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("id", segment.id().toString());
                 entry.put("kind", segment.kind().name());
                 entry.put("pos", coords(segment.pos()));
+                StorageGui storage = storages.get(segment.id());
+                if (storage != null) {
+                    entry.put("items", encode(storage.getInventory(), StorageGui.CONSUMPTION_START,
+                            StorageGui.GATHERED_END));
+                }
+                IncineratorGui incinerator = incinerators.get(segment.id());
+                if (incinerator != null) {
+                    entry.put("filter", encode(incinerator.getInventory(), 0, IncineratorGui.SIZE - 1));
+                }
                 segments.add(entry);
             }
             out.set(path + ".segments", segments);
@@ -385,7 +507,17 @@ public final class CaterpillarManager {
             Machine machine = new Machine(id, owner, worldId, facing, base, plugin.settings().params());
             for (Map<?, ?> entry : section.getMapList("segments")) {
                 SegmentKind kind = SegmentKind.valueOf(String.valueOf(entry.get("kind")));
-                machine.restoreSegment(kind, pos((List<?>) entry.get("pos")));
+                Object savedId = entry.get("id");
+                UUID segmentId = savedId == null ? UUID.randomUUID() : UUID.fromString(String.valueOf(savedId));
+                machine.restoreSegment(segmentId, kind, pos((List<?>) entry.get("pos")));
+                Machine.Segment restored = machine.segments().get(machine.segments().size() - 1);
+                createSegmentData(machine, restored);
+                if (entry.get("items") instanceof Map<?, ?> saved && storages.get(segmentId) != null) {
+                    decode(saved, storages.get(segmentId).getInventory(), idText);
+                }
+                if (entry.get("filter") instanceof Map<?, ?> saved && incinerators.get(segmentId) != null) {
+                    decode(saved, incinerators.get(segmentId).getInventory(), idText);
+                }
             }
             machine.restoreState(
                     section.getInt("state.lit-time"),
@@ -421,6 +553,30 @@ public final class CaterpillarManager {
         } catch (RuntimeException ex) {
             plugin.getLogger().log(Level.WARNING, "Could not restore caterpillar " + idText + ": " + ex.getMessage());
             return false;
+        }
+    }
+
+    private static Map<String, String> encode(org.bukkit.inventory.Inventory inventory, int from, int to) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (int slot = from; slot <= to; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack != null && !stack.getType().isAir()) {
+                out.put(String.valueOf(slot), Base64.getEncoder().encodeToString(stack.serializeAsBytes()));
+            }
+        }
+        return out;
+    }
+
+    private void decode(Map<?, ?> saved, org.bukkit.inventory.Inventory inventory, String machineId) {
+        for (Map.Entry<?, ?> item : saved.entrySet()) {
+            try {
+                int slot = Integer.parseInt(String.valueOf(item.getKey()));
+                byte[] bytes = Base64.getDecoder().decode(String.valueOf(item.getValue()));
+                inventory.setItem(slot, ItemStack.deserializeBytes(bytes));
+            } catch (RuntimeException ex) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Skipping an unreadable item in caterpillar " + machineId + " segment slot " + item.getKey(), ex);
+            }
         }
     }
 

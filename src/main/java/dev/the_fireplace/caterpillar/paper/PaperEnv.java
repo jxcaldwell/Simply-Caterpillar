@@ -8,6 +8,7 @@ import dev.the_fireplace.caterpillar.core.Msg;
 import dev.the_fireplace.caterpillar.core.Pos;
 import dev.the_fireplace.caterpillar.core.SegmentKind;
 import dev.the_fireplace.caterpillar.core.Terrain;
+import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,9 +20,12 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BoundingBox;
 
 /** Implements the machine's view of the world with the Bukkit/Paper API. */
 public final class PaperEnv implements Env {
@@ -193,10 +197,54 @@ public final class PaperEnv implements Env {
         if (world == null) {
             return;
         }
-        Material material = switch (kind) {
-            case SPACER -> settings().spacer;
-        };
+        Material material = settings().partMaterial(PartType.forSegment(kind));
         block(world, pos).setBlockData(data(material, machine.facing()), false);
+    }
+
+    @Override
+    public void segmentMoved(Machine machine, Machine.Segment segment) {
+        if (segment.kind() == SegmentKind.SEAT) {
+            plugin.manager().seats().follow(machine, segment);
+        }
+    }
+
+    @Override
+    public void segmentTick(Machine machine, Machine.Segment segment) {
+        switch (segment.kind()) {
+            case COLLECTOR -> collect(machine, segment);
+            case INCINERATOR -> {
+                IncineratorGui filter = plugin.manager().incinerator(segment.id());
+                if (filter != null) {
+                    Set<Material> types = filter.types();
+                    if (!types.isEmpty()) {
+                        plugin.manager().incinerateGathered(machine, types);
+                    }
+                }
+            }
+            default -> { }
+        }
+    }
+
+    /** Pulls dropped items near the collector into the caterpillar's gathered slots. */
+    private void collect(Machine machine, Machine.Segment segment) {
+        World world = world(machine);
+        if (world == null) {
+            return;
+        }
+        Pos pos = segment.pos();
+        BoundingBox area = BoundingBox.of(block(world, pos)).expand(settings().collectorRadius);
+        for (Entity entity : world.getNearbyEntities(area, candidate -> candidate instanceof Item)) {
+            Item item = (Item) entity;
+            if (!item.isValid()) {
+                continue;
+            }
+            ItemStack rest = plugin.manager().depositGathered(machine, item.getItemStack());
+            if (rest == null) {
+                item.remove();
+            } else {
+                item.setItemStack(rest);
+            }
+        }
     }
 
     @Override
