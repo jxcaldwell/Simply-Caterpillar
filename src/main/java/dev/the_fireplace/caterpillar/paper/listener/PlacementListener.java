@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -54,9 +55,12 @@ public final class PlacementListener implements Listener {
 
         Block placed = event.getBlockPlaced();
         Pos pos = new Pos(placed.getX(), placed.getY(), placed.getZ());
+        // Bukkit has already put the item's block into the world while this event runs, so the clicked position
+        // has to be judged by what was there before.
+        BlockState replaced = event.getBlockReplacedState();
         boolean built = switch (type) {
-            case DRILL_HEAD -> placeHead(player, pos);
-            case DRILL_BASE -> placeSegment(player, pos);
+            case DRILL_HEAD -> placeHead(player, pos, replaced);
+            case DRILL_BASE -> placeSegment(player, pos, replaced);
         };
 
         if (built && player.getGameMode() != GameMode.CREATIVE) {
@@ -65,7 +69,7 @@ public final class PlacementListener implements Listener {
     }
 
     /** {@code pos} is the bottom-centre block of the 3x3 cutting face; the base sits behind its middle. */
-    private boolean placeHead(Player player, Pos pos) {
+    private boolean placeHead(Player player, Pos pos, BlockState replaced) {
         World world = player.getWorld();
         Facing facing = Facing.fromYaw(player.getLocation().getYaw());
         Pos center = pos.add(0, 1, 0);
@@ -78,7 +82,7 @@ public final class PlacementListener implements Listener {
 
         List<HeadCell> cells = Machine.headCells(base, facing);
         for (HeadCell cell : cells) {
-            if (!spaceIsFree(player, world, cell.pos())) {
+            if (!spaceIsFree(player, world, cell.pos(), replaced)) {
                 return false;
             }
         }
@@ -88,7 +92,7 @@ public final class PlacementListener implements Listener {
     }
 
     /** Segments attach directly behind the last part of an existing caterpillar. */
-    private boolean placeSegment(Player player, Pos pos) {
+    private boolean placeSegment(Player player, Pos pos, BlockState replaced) {
         World world = player.getWorld();
         UUID worldId = world.getUID();
 
@@ -119,7 +123,7 @@ public final class PlacementListener implements Listener {
             player.sendActionBar(plugin.lang().get(key));
             return false;
         }
-        if (!spaceIsFree(player, world, pos)) {
+        if (!spaceIsFree(player, world, pos, replaced)) {
             return false;
         }
 
@@ -128,13 +132,18 @@ public final class PlacementListener implements Listener {
     }
 
     /** Checks that one block position can be built on, sending the player the reason if not. */
-    private boolean spaceIsFree(Player player, World world, Pos pos) {
+    private boolean spaceIsFree(Player player, World world, Pos pos, BlockState replaced) {
         if (plugin.manager().isPart(world.getUID(), pos)) {
             player.sendActionBar(plugin.lang().get("msg.place.overlap"));
             return false;
         }
         Block block = world.getBlockAt(pos.x(), pos.y(), pos.z());
-        if (!block.getType().isAir() && !block.isReplaceable()) {
+        boolean isClickedBlock = block.getX() == replaced.getX() && block.getY() == replaced.getY()
+                && block.getZ() == replaced.getZ();
+        boolean replaceable = isClickedBlock
+                ? replaced.getType().isAir() || replaced.getBlockData().isReplaceable()
+                : block.getType().isAir() || block.isReplaceable();
+        if (!replaceable) {
             player.sendActionBar(plugin.lang().get("msg.place.no-room"));
             return false;
         }
