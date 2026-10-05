@@ -46,6 +46,12 @@ public final class Settings {
     /** Minimum seconds between two "out of supply" messages for the same item (0 = never warn). */
     public final int supplyWarningSeconds;
 
+    public final boolean packEnabled;
+    public final boolean packRequired;
+    public final boolean worldModels;
+    public final String packUrl;
+    public final String packSha1;
+
     public final Set<Material> unbreakable;
 
     public Settings(FileConfiguration config, Logger log) {
@@ -86,6 +92,12 @@ public final class Settings {
         collectorRadius = Math.max(0.5, Math.min(16, config.getDouble("collector.radius", 3.0)));
         supplyAmount = Math.max(0, config.getInt("collector.supply-amount", 64));
         supplyWarningSeconds = Math.max(0, config.getInt("supply-warning-seconds", 60));
+
+        packEnabled = config.getBoolean("resource-pack.enabled", true);
+        packRequired = config.getBoolean("resource-pack.required", false);
+        worldModels = config.getBoolean("resource-pack.world-models", true);
+        packUrl = config.getString("resource-pack.url", "").trim();
+        packSha1 = config.getString("resource-pack.sha1", "").trim();
 
         Set<Material> blocked = EnumSet.noneOf(Material.class);
         for (String name : config.getStringList("unbreakable-blocks")) {

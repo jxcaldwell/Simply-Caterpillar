@@ -143,6 +143,8 @@ msg:
   not-owner: "<red>This caterpillar belongs to someone else."
   seat:
     occupied: "<red>Someone is already sitting there."
+  pack:
+    prompt: "<gold>Simply Caterpillar</gold> <gray>would like to show caterpillars with their original 3D models. Optional: you can play without it."
   supply:
     out: "<yellow>Caterpillar: out of <white><item></white> for the <part><yellow>. Add more to the consumption slots (middle row)."
   no-permission: "<red>You do not have permission to do that."

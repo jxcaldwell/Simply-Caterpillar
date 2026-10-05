@@ -37,13 +37,15 @@ public final class Recipes {
         ShapedRecipe head = new ShapedRecipe(headKey, items.create(PartType.DRILL_HEAD, 1));
         head.shape("iii", " d ", " f ");
         head.setIngredient('i', Material.IRON_INGOT);
-        head.setIngredient('d', new RecipeChoice.ExactChoice(items.create(PartType.DRILL_BASE, 1)));
+        head.setIngredient('d', new RecipeChoice.ExactChoice(
+                List.of(items.create(PartType.DRILL_BASE, 1), items.createLegacy(PartType.DRILL_BASE, 1))));
         head.setIngredient('f', Material.FURNACE);
         Bukkit.addRecipe(head);
         keys.add(headKey);
 
         // The attachments all start from a Basic Drill Segment (the original mod's recipes).
-        RecipeChoice.ExactChoice segment = new RecipeChoice.ExactChoice(items.create(PartType.DRILL_BASE, 1));
+        RecipeChoice.ExactChoice segment = new RecipeChoice.ExactChoice(
+                List.of(items.create(PartType.DRILL_BASE, 1), items.createLegacy(PartType.DRILL_BASE, 1)));
 
         // Storage:  c d c   (c = chest)
         ShapedRecipe storage = shaped(plugin, keys, PartType.STORAGE);

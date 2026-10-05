@@ -3,6 +3,7 @@ package dev.the_fireplace.caterpillar.paper;
 import dev.the_fireplace.caterpillar.paper.listener.CraftListener;
 import dev.the_fireplace.caterpillar.paper.listener.GuiListener;
 import dev.the_fireplace.caterpillar.paper.listener.InteractListener;
+import dev.the_fireplace.caterpillar.paper.listener.PackListener;
 import dev.the_fireplace.caterpillar.paper.listener.PlacementListener;
 import dev.the_fireplace.caterpillar.paper.listener.ProtectionListener;
 import dev.the_fireplace.caterpillar.paper.listener.WorldListener;
@@ -21,6 +22,7 @@ public final class SimplyCaterpillarPlugin extends JavaPlugin {
     private Lang lang;
     private FuelRegistry fuels;
     private CaterpillarItems items;
+    private ResourcePack resourcePack;
     private PaperEnv env;
     private CaterpillarManager manager;
     private List<NamespacedKey> recipeKeys = List.of();
@@ -40,6 +42,7 @@ public final class SimplyCaterpillarPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GuiListener(this), this);
         getServer().getPluginManager().registerEvents(new CraftListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldListener(this), this);
+        getServer().getPluginManager().registerEvents(new PackListener(this), this);
 
         PluginCommand command = getCommand("caterpillar");
         if (command != null) {
@@ -66,6 +69,7 @@ public final class SimplyCaterpillarPlugin extends JavaPlugin {
         lang = new Lang(this, settings.language);
         fuels = new FuelRegistry(getConfig().getConfigurationSection("fuels"), getLogger());
         items = new CaterpillarItems(this, settings, lang);
+        resourcePack = new ResourcePack(this);
     }
 
     /** Re-reads config.yml and the language file and applies them to running machines. */
@@ -90,6 +94,10 @@ public final class SimplyCaterpillarPlugin extends JavaPlugin {
 
     public CaterpillarItems items() {
         return items;
+    }
+
+    public ResourcePack resourcePack() {
+        return resourcePack;
     }
 
     public PaperEnv env() {

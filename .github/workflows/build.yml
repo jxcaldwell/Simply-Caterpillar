@@ -1,8 +1,12 @@
-# Builds the Paper plugin and runs the unit tests.
+# Builds the Paper plugin and its resource pack, runs the unit tests, and publishes each push to paper-plugin as a
+# pre-release (jar + pack). The plugin offers the pack from that release, so the release must stay public.
 
 name: Build plugin
 
 on: [push, pull_request]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -34,4 +38,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SimplyCaterpillar_JAR
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            build/pack/SimplyCaterpillar-pack.zip
+      - name: Publish pre-release (jar + resource pack)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/paper-plugin'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          short="${GITHUB_SHA::7}"
+          tag="build-${short}"
+          gh release create "$tag" build/libs/*.jar build/pack/SimplyCaterpillar-pack.zip \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Paper plugin build ${short}" \
+            --notes "Automatic build of commit ${GITHUB_SHA} on paper-plugin. Install the jar in plugins/. The resource pack is offered to players automatically."
+          # Keep only the 10 newest automatic builds.
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
+            | while read -r old; do gh release delete "$old" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done

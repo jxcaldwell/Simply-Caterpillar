@@ -2,7 +2,9 @@ package dev.the_fireplace.caterpillar.paper;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
+import java.util.List;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
@@ -28,8 +30,33 @@ public final class CaterpillarItems {
         meta.displayName(lang.item("item." + type.id + ".name"));
         meta.lore(lang.itemList("item." + type.id + ".lore"));
         meta.getPersistentDataContainer().set(partKey, PersistentDataType.STRING, type.id);
+        // Selects the original icon in the resource pack; without the pack it changes nothing.
+        CustomModelDataComponent modelData = meta.getCustomModelDataComponent();
+        modelData.setStrings(List.of("simplycaterpillar:" + type.id));
+        meta.setCustomModelDataComponent(modelData);
         stack.setItemMeta(meta);
         return stack;
+    }
+
+    /** The same part as made by older versions of the plugin (no custom model data), for recipe matching. */
+    public ItemStack createLegacy(PartType type, int amount) {
+        ItemStack stack = create(type, amount);
+        ItemMeta meta = stack.getItemMeta();
+        CustomModelDataComponent modelData = meta.getCustomModelDataComponent();
+        modelData.setStrings(List.of());
+        meta.setCustomModelDataComponent(modelData);
+        stack.setItemMeta(meta);
+        return stack;
+    }
+
+    /** Brings an existing part item up to date (name, description, icon); returns null if it is not a part. */
+    public ItemStack refresh(ItemStack stack) {
+        PartType type = identify(stack);
+        if (type == null) {
+            return null;
+        }
+        ItemStack fresh = create(type, stack.getAmount());
+        return fresh.isSimilar(stack) ? null : fresh;
     }
 
     /** The part this item is, or null for any other item. */

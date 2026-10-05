@@ -28,6 +28,20 @@ recipes:
   # Unlock the recipes for players when they join.
   discover-on-join: true
 
+resource-pack:
+  # Offer the resource pack with the original Simply Caterpillar models to players when they join. Players who
+  # decline it (and Bedrock players) keep seeing the plain blocks below.
+  enabled: true
+  # Disconnect Java players who decline the pack.
+  required: false
+  # Show the original 3D models on caterpillars in the world to players who loaded the pack. With it, those
+  # players break caterpillar parts by sneaking and left-clicking them.
+  world-models: true
+  # Leave empty to use the pack published with this plugin build on GitHub. To host it yourself, put the
+  # direct download link and the SHA-1 of the zip here.
+  url: ""
+  sha1: ""
+
 # Blocks used to build the machine. Use block materials that are NOT containers and do not
 # change by themselves. Placed items are tagged, so these materials can still be used normally.
 blocks:

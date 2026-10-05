@@ -47,5 +47,13 @@ public final class CraftListener implements Listener {
         if (plugin.settings().discoverOnJoin) {
             event.getPlayer().discoverRecipes(plugin.recipeKeys());
         }
+        // Part items made by older versions get the current name, description and icon.
+        var inventory = event.getPlayer().getInventory();
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            ItemStack fresh = plugin.items().refresh(inventory.getItem(slot));
+            if (fresh != null) {
+                inventory.setItem(slot, fresh);
+            }
+        }
     }
 }

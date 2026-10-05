@@ -10,15 +10,15 @@ original models and textures in [`resourcepack`](resourcepack) for a later resou
 
 **Target:** Paper 26.2, Java 25.
 
-## Status: milestone 4
+## Status: milestone 5 (all milestones done)
 
 | Part | Status |
 |---|---|
 | Drill head, basic drill segment, fuel, power button, drilling, movement | done |
 | Storage, item collector, incinerator, drill seat | done |
 | Transporter | done |
-| Reinforcement builder, decoration placer | done (this milestone) |
-| Optional resource pack with the original models | planned (milestone 5) |
+| Reinforcement builder, decoration placer | done |
+| Optional resource pack with the original models | done (this milestone) |
 
 ## How to play
 
@@ -61,6 +61,25 @@ reinforcement builder replaces is broken first, so its drops can be collected.
 While powered the drill burns fuel (one unit per tick per part: the longer the caterpillar, the hungrier it is),
 breaks the 3x3 area in front of it every 3 seconds, steps forward, and the segments follow one by one.
 Breaking a part of the caterpillar takes the whole thing apart and returns the parts and stored items.
+
+## Resource pack (optional)
+
+Players are offered a resource pack with the original mod's models when they join. With it:
+
+* caterpillars in the world show the original 3D models (drill head with its spinning-bit "drilling" look, storage
+  chests on the sides, collector hopper, transporter cart, reinforcement pistons...), and
+* part items show their original icons.
+
+Players who decline it, and Bedrock players joining through Geyser, keep seeing the plain blocks; nothing breaks for
+them. Players with the pack see the plain blocks as invisible barriers and break caterpillar parts by **sneaking and
+left-clicking** them.
+
+Every build on GitHub publishes the pack (`SimplyCaterpillar-pack.zip`) as a pre-release next to the jar, and the jar
+knows the link and checksum of its own pack, so nothing needs configuring. Settings are under `resource-pack:` in
+`config.yml` (turn it off, make it required, or host the pack yourself). The pack is built from
+[`resourcepack/`](resourcepack); `tools/generate_pack.py` regenerates its 26.2 item definitions. The part icons
+replace the icons of the default placeholder blocks only for part items; if you change `blocks:` in the config, the
+part icons fall back to the plain block icons (the world models are unaffected).
 
 ## Server notes
 

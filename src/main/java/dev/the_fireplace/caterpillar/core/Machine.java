@@ -244,6 +244,11 @@ public final class Machine {
         return moving;
     }
 
+    /** True while the head shows its "drilling" look. */
+    public boolean drillingVisual() {
+        return drillingVisual;
+    }
+
     public int litTime() {
         return litTime;
     }

@@ -65,6 +65,7 @@ public final class CaterpillarManager {
     private final Map<UUID, ReinforcementGui> reinforcements = new HashMap<>();
     private final Map<UUID, DecorationGui> decorations = new HashMap<>();
     private final Builders builders;
+    private final Visuals visuals;
     private final Seats seats;
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
@@ -82,6 +83,7 @@ public final class CaterpillarManager {
         this.plugin = plugin;
         this.seats = new Seats(plugin);
         this.builders = new Builders(plugin);
+        this.visuals = new Visuals(plugin);
     }
 
     // ---------------------------------------------------------------- lookups
@@ -116,6 +118,10 @@ public final class CaterpillarManager {
 
     public DecorationGui decoration(UUID segmentId) {
         return decorations.get(segmentId);
+    }
+
+    public Visuals visuals() {
+        return visuals;
     }
 
     public Builders builders() {
@@ -159,6 +165,7 @@ public final class CaterpillarManager {
             task = null;
         }
         seats.removeAll();
+        visuals.removeAll();
     }
 
     /** Applies configuration changes (tunables) to every running machine. */
@@ -172,6 +179,7 @@ public final class CaterpillarManager {
     private void tickAll() {
         tickCount++;
         Env env = plugin.env();
+        visuals.beforeTick();
 
         for (Machine machine : new ArrayList<>(machines.values())) {
             try {
@@ -192,6 +200,11 @@ public final class CaterpillarManager {
             if (seen == null || seen != machine.layoutVersion()) {
                 reindex(machine);
                 dirty = true;
+            }
+            try {
+                visuals.afterTick(machine, tickCount % 40 == 0);
+            } catch (RuntimeException ex) {
+                plugin.getLogger().log(Level.WARNING, "Could not update the models of caterpillar " + machine.id(), ex);
             }
         }
 
@@ -696,6 +709,7 @@ public final class CaterpillarManager {
         restores.forEach(Runnable::run);
         unindex(machine.id());
         machines.remove(machine.id());
+        visuals.remove(machine.id());
         dirty = true;
 
         for (ItemStack stack : drops) {

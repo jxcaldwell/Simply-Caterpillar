@@ -1,8 +1,7 @@
 {
-    "pack": {
-        "pack_format": 15,
-        "description": {
-            "translate": "pack.simplycaterpillar.description"
-        }
-    }
+  "pack": {
+    "description": "Simply Caterpillar: original models for the Paper plugin",
+    "min_format": 88,
+    "max_format": 999
+  }
 }

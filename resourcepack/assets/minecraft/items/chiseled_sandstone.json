@@ -1,0 +1,20 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": "simplycaterpillar:decoration",
+        "model": {
+          "type": "minecraft:model",
+          "model": "simplycaterpillar:item/decoration"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:block/chiseled_sandstone"
+    }
+  }
+}
