@@ -10,6 +10,8 @@ on:
     branches: ['**']
     tags: ['v*']
   pull_request:
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -63,7 +65,7 @@ jobs:
             --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
             | while read -r old; do gh release delete "$old" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done
       - name: Publish release (tag v*)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -74,6 +76,15 @@ jobs:
             on && /^## \[/ { exit }
             on { print }
           ' CHANGELOG.md > release-notes.md
-          gh release create "$GITHUB_REF_NAME" build/libs/*.jar build/pack/SimplyCaterpillar-pack.zip \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --latest \
-            --title "Simply Caterpillar ${version} for Paper 26.2" --notes-file release-notes.md
+          title="Simply Caterpillar ${version} for Paper 26.2"
+          # The release may already exist (created on the GitHub website, or by the other of the two events a
+          # website release triggers): then just attach the files and set the title and notes.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" build/libs/*.jar build/pack/SimplyCaterpillar-pack.zip \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "$title" --notes-file release-notes.md --prerelease=false --latest
+          else
+            gh release create "$GITHUB_REF_NAME" build/libs/*.jar build/pack/SimplyCaterpillar-pack.zip \
+              --repo "$GITHUB_REPOSITORY" --verify-tag --latest --title "$title" --notes-file release-notes.md
+          fi
