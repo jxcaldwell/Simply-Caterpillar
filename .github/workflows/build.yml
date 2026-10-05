@@ -1,9 +1,15 @@
-# Builds the Paper plugin and its resource pack, runs the unit tests, and publishes each push to paper-plugin as a
-# pre-release (jar + pack). The plugin offers the pack from that release, so the release must stay public.
+# Builds the Paper plugin and its resource pack and runs the unit tests.
+# - A push to paper-plugin is published as a pre-release "build-<commit>" (jar + pack); only the 10 newest are kept.
+# - A tag v* (e.g. v1.0.0) is published as a full release with the notes from CHANGELOG.md; it is never pruned.
+# The plugin offers the pack from the release it was built for, so releases must stay public.
 
 name: Build plugin
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
 
 permissions:
   contents: write
@@ -56,3 +62,18 @@ jobs:
           gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,createdAt \
             --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
             | while read -r old; do gh release delete "$old" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; done
+      - name: Publish release (tag v*)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Release notes: the CHANGELOG.md section of this version.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > release-notes.md
+          gh release create "$GITHUB_REF_NAME" build/libs/*.jar build/pack/SimplyCaterpillar-pack.zip \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --latest \
+            --title "Simply Caterpillar ${version} for Paper 26.2" --notes-file release-notes.md

@@ -4,22 +4,42 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Changed
+## [1.0.0] - 2026-10-04
 
-- Rewritten as a server-side Paper 26.2 plugin (Java 25). Forge, Fabric and client mods are no longer needed.
-  The Forge 1.20.1 sources are archived under `legacy/forge-1.20.1`; models and textures moved to `resourcepack/`.
+First release of Simply Caterpillar as a **server-side Paper 26.2 plugin** (Java 25). Forge, Fabric and client mods
+are no longer needed: players join with a vanilla client, and Bedrock players through Geyser work too.
 
-### Added
+### Parts
 
-- Milestone 5: optional resource pack with the original models, offered on join; 3D models in the world and original item icons for players who accept it.
-- Collected items that a part uses are put into the consumption slots (up to 64 each); the owner is warned when a part runs out of an item.
-- Decoration placer: adjustable cycle length (1-16 patterns). Fixed: blocks could not be picked up to set reinforcement, decoration or incinerator slots; shift-click now adds a block.
-- Milestone 4: reinforcement builder and decoration placer, using blocks from the consumption slots.
-- Milestone 3: transporter segment that carries and releases chest minecarts full of gathered items.
-- Milestone 2: storage, collector, incinerator and drill-seat segments (see the README for how they behave), with
-  the original mod's recipes. Jar names now include the commit id.
-- Milestone 1: drill head, basic drill segment, fuel and power GUI, 3x3 drilling and movement, protection-plugin
-  checks, persistence, `/caterpillar give|reload|list`.
+- **Drill head** with fuel and a power button: digs a 3x3 tunnel, one block every 3 seconds, and moves forward; the
+  segments follow one by one. Fuel use grows with the length of the caterpillar.
+- **Basic drill segment**, **storage** (9 consumption + 9 gathered slots), **collector** (picks up drops),
+  **incinerator** (destroys chosen item types), **drill seat** (ride along), **transporter** (fills chest minecarts
+  with full stacks and sends them down the rails), **reinforcement builder** (seals the tunnel walls, ceiling and
+  floor against water, lava and falling blocks) and **decoration placer** (rails, supports and torches from up to 16
+  repeating patterns).
+- All crafted with the original mod's recipes; `/caterpillar give|reload|list` for admins.
+
+### Server features
+
+- Each caterpillar belongs to the player who placed it; protection plugins (GriefPrevention, WorldGuard...) are
+  checked as that player for every block broken or placed.
+- Caterpillars pause while their owner is offline or their chunks are unloaded, survive restarts, and cannot be
+  blown up or pushed by pistons.
+- Collected items that a part needs go to its supply first; the owner is told when a part runs out of something.
+- Configurable fuels, speeds, blocks, limits and messages (MiniMessage language file).
+
+### Optional resource pack
+
+- The original 3D models and item icons, offered to players when they join. Players who decline it, and Bedrock
+  players, see plain blocks instead; nothing else changes for them.
+
+### Changes from the Forge mod
+
+- Parts are one block wide (the original storage, reinforcement and decoration parts were wider; with the resource
+  pack their side pieces are still shown).
+- Breaking the drill head takes the whole caterpillar apart and returns the parts and stored items.
+- The original Forge 1.20.1 sources are archived under `legacy/forge-1.20.1`.
 
 ## [1.20.1-8.0.2] - 2024-01-04
 

@@ -10,7 +10,13 @@ original models and textures in [`resourcepack`](resourcepack) for a later resou
 
 **Target:** Paper 26.2, Java 25.
 
-## Status: milestone 5 (all milestones done)
+## Download
+
+Get the jar from the [latest release](https://github.com/jxcaldwell/Simply-Caterpillar/releases/latest) and put it in
+your server's `plugins` folder. Nothing else is needed: the resource pack is offered to players automatically.
+Requires Paper 26.2 and Java 25. Test builds of every change are published as pre-releases (`build-<commit>`).
+
+## Status: 1.0.0
 
 | Part | Status |
 |---|---|
