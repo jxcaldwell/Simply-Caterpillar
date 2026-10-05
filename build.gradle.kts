@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     java
 }
@@ -57,7 +59,7 @@ val packInfo = tasks.register("resourcePackInfo") {
     outputs.dir(packInfoDir)
     doLast {
         val bytes = zipFile.get().asFile.readBytes()
-        val sha1 = java.security.MessageDigest.getInstance("SHA-1").digest(bytes)
+        val sha1 = MessageDigest.getInstance("SHA-1").digest(bytes)
             .joinToString("") { "%02x".format(it) }
         val url = if (repo.isNotEmpty() && tagCommit.isNotEmpty())
             "https://github.com/$repo/releases/download/build-$tagCommit/SimplyCaterpillar-pack.zip" else ""
