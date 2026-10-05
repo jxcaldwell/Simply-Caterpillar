@@ -202,7 +202,7 @@ public final class CaterpillarManager {
                 dirty = true;
             }
             try {
-                visuals.afterTick(machine, tickCount % 40 == 0);
+                visuals.afterTick(machine, tickCount % 20 == 0);
             } catch (RuntimeException ex) {
                 plugin.getLogger().log(Level.WARNING, "Could not update the models of caterpillar " + machine.id(), ex);
             }

@@ -43,9 +43,21 @@ public final class Visuals {
     private static final String NS = "simplycaterpillar";
     private static final BlockData HIDDEN = Material.BARRIER.createBlockData();
 
-    /** One model at one position. */
-    private record Element(Pos pos, String model) {
+    /**
+     * One model at one position. {@code onlyIfFree} marks the side pieces of the originally wider parts (storage
+     * chests, reinforcement pistons, collector hopper...): they stand in the tunnel next to the part and are only
+     * drawn where nothing else is, so they never overlap rails, fences or other real blocks.
+     */
+    private record Element(Pos pos, String model, boolean onlyIfFree) {
+        Element(Pos pos, String model) {
+            this(pos, model, false);
+        }
     }
+
+    /** Slightly larger than a block, so a model always draws over a plain block in the same place (no flicker). */
+    private static final float SCALE = 1.002f;
+    /** Ticks before a display that vanished may be spawned again, so a half-loaded chunk cannot cause a spawn storm. */
+    private static final int RESPAWN_COOLDOWN = 100;
 
     private final SimplyCaterpillarPlugin plugin;
     private final Set<UUID> packPlayers = new HashSet<>();
@@ -53,6 +65,7 @@ public final class Visuals {
     private final Map<UUID, Map<String, ItemDisplay>> displays = new HashMap<>();
     private final Map<UUID, Map<String, String>> shownModels = new HashMap<>();
     private final Map<UUID, Integer> shownState = new HashMap<>();
+    private final Map<UUID, Map<String, Integer>> lastSpawn = new HashMap<>();
     /** Caterpillars whose hidden blocks must be re-sent on the next tick (after the server sent the real ones). */
     private Set<UUID> resendNext = new HashSet<>();
 
@@ -153,7 +166,14 @@ public final class Visuals {
         if (world == null || !plugin.env().areaLoaded(machine)) {
             return false;
         }
+        for (Pos pos : machine.footprint()) {
+            if (!world.getChunkAt(pos.chunkX(), pos.chunkZ()).isEntitiesLoaded()) {
+                return false;
+            }
+        }
         Map<String, Element> wanted = elements(machine);
+        wanted.values().removeIf(element -> element.onlyIfFree() && !world.getBlockAt(
+                element.pos().x(), element.pos().y(), element.pos().z()).getType().isAir());
         Map<String, ItemDisplay> current = displays.computeIfAbsent(machine.id(), id -> new HashMap<>());
         Map<String, String> models = shownModels.computeIfAbsent(machine.id(), id -> new HashMap<>());
         Transformation rotation = rotation(machine.facing());
@@ -174,6 +194,13 @@ public final class Visuals {
                     element.pos().z() + 0.5);
             ItemDisplay display = current.get(entry.getKey());
             if (display == null) {
+                Map<String, Integer> spawned = lastSpawn.computeIfAbsent(machine.id(), id -> new HashMap<>());
+                Integer last = spawned.get(entry.getKey());
+                int now = Bukkit.getCurrentTick();
+                if (last != null && now - last < RESPAWN_COOLDOWN) {
+                    continue;
+                }
+                spawned.put(entry.getKey(), now);
                 display = world.spawn(at, ItemDisplay.class, spawned -> {
                     spawned.setItemStack(modelItem(element.model()));
                     spawned.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
@@ -222,7 +249,7 @@ public final class Visuals {
             case WEST -> 270;
         };
         return new Transformation(new Vector3f(), new Quaternionf().rotateY((float) Math.toRadians(-degrees)),
-                new Vector3f(1, 1, 1), new Quaternionf());
+                new Vector3f(SCALE, SCALE, SCALE), new Quaternionf());
     }
 
     /** Every model a caterpillar shows, by a stable key (so a display follows its part when it moves). */
@@ -249,12 +276,12 @@ public final class Visuals {
                 case SPACER -> out.put(key + "c", new Element(pos, "drill_base_block"));
                 case STORAGE -> {
                     out.put(key + "c", new Element(pos, "drill_base_block"));
-                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "storage_left"));
-                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "storage_right"));
+                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "storage_left", true));
+                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "storage_right", true));
                 }
                 case COLLECTOR -> {
                     out.put(key + "c", new Element(pos, "drill_base_block"));
-                    out.put(key + "b", new Element(pos.add(0, -1, 0), "collector_lower"));
+                    out.put(key + "b", new Element(pos.add(0, -1, 0), "collector_lower", true));
                 }
                 case INCINERATOR -> out.put(key + "c", new Element(pos, "incinerator_block"));
                 case SEAT -> out.put(key + "c", new Element(pos, "drill_seat_block"));
@@ -266,15 +293,15 @@ public final class Visuals {
                 }
                 case REINFORCEMENT -> {
                     out.put(key + "c", new Element(pos, "reinforcement_base"));
-                    out.put(key + "t", new Element(pos.add(0, 1, 0), "reinforcement_top"));
-                    out.put(key + "b", new Element(pos.add(0, -1, 0), "reinforcement_bottom"));
-                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "reinforcement_left"));
-                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "reinforcement_right"));
+                    out.put(key + "t", new Element(pos.add(0, 1, 0), "reinforcement_top", true));
+                    out.put(key + "b", new Element(pos.add(0, -1, 0), "reinforcement_bottom", true));
+                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "reinforcement_left", true));
+                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "reinforcement_right", true));
                 }
                 case DECORATION -> {
                     out.put(key + "c", new Element(pos, "drill_base_block"));
-                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "decoration_left"));
-                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "decoration_right"));
+                    out.put(key + "l", new Element(pos.offset(facing, 0, 0, -1), "decoration_left", true));
+                    out.put(key + "r", new Element(pos.offset(facing, 0, 0, 1), "decoration_right", true));
                 }
             }
         }
@@ -300,6 +327,7 @@ public final class Visuals {
         }
         shownModels.remove(machineId);
         shownState.remove(machineId);
+        lastSpawn.remove(machineId);
     }
 
     public void removeAll() {
