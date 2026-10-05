@@ -194,13 +194,13 @@ public final class Visuals {
                     element.pos().z() + 0.5);
             ItemDisplay display = current.get(entry.getKey());
             if (display == null) {
-                Map<String, Integer> spawned = lastSpawn.computeIfAbsent(machine.id(), id -> new HashMap<>());
-                Integer last = spawned.get(entry.getKey());
+                Map<String, Integer> spawnTicks = lastSpawn.computeIfAbsent(machine.id(), id -> new HashMap<>());
+                Integer last = spawnTicks.get(entry.getKey());
                 int now = Bukkit.getCurrentTick();
                 if (last != null && now - last < RESPAWN_COOLDOWN) {
                     continue;
                 }
-                spawned.put(entry.getKey(), now);
+                spawnTicks.put(entry.getKey(), now);
                 display = world.spawn(at, ItemDisplay.class, spawned -> {
                     spawned.setItemStack(modelItem(element.model()));
                     spawned.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
