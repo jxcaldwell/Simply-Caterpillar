@@ -43,8 +43,6 @@ val packZip = tasks.register<Zip>("resourcePackZip") {
     from("resourcepack")
     archiveFileName.set("SimplyCaterpillar-pack.zip")
     destinationDirectory.set(layout.buildDirectory.dir("pack"))
-    isPreserveFileTimestamps = false
-    isReproducibleFileOrder = true
 }
 
 val packInfoDir = layout.buildDirectory.dir("generated/pack-info")

@@ -30,7 +30,7 @@ jobs:
           cat build.log
           if [ $status -ne 0 ]; then
             # Surface the failure reasons as annotations so they are visible without opening the log.
-            grep -E "error:|warning: \[|FAILED|AssertionFailedError|Exception|What went wrong|Could not" build.log | head -40 \
+            grep -E -A3 "error:|^e: |FAILED|AssertionFailedError|Exception|What went wrong|Could not" build.log | head -60 \
               | while IFS= read -r line; do echo "::error::${line}"; done
           fi
           exit $status
