@@ -12,7 +12,7 @@ val commit = System.getenv("GITHUB_SHA")?.take(7)
 val releaseTag = System.getenv("GITHUB_REF_NAME")
     ?.takeIf { System.getenv("GITHUB_REF_TYPE") == "tag" && it.startsWith("v") }
 version = when {
-    releaseTag != null -> releaseTag.removePrefix("v")
+    releaseTag != null -> releaseTag.removePrefix("v").removePrefix(".")
     commit != null -> "$baseVersion-$commit"
     else -> "$baseVersion-dev"
 }

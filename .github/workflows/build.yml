@@ -70,6 +70,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           version="${GITHUB_REF_NAME#v}"
+          version="${version#.}"   # also accept tags written as v.1.0.0
           # Release notes: the CHANGELOG.md section of this version.
           awk -v v="$version" '
             $0 ~ "^## \\[" v "\\]" { on = 1; next }
