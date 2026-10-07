@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-06
+
+### Fixed
+
+- Bedrock players joining through Geyser/Floodgate are no longer offered the Java resource pack or sent the 3D-model
+  view of caterpillars (display entities and client-side block changes they cannot use); they always see the plain
+  blocks. This is the most likely cause of the disconnects seen with Bedrock players.
+- No more packets are sent to a player whose connection has just closed (the burst of `ClosedChannelException`
+  warnings in the log after a disconnect), and the hidden blocks of a caterpillar are sent as one batched update
+  instead of one packet per block.
+
 ## [1.0.0] - 2026-10-04
 
 First release of Simply Caterpillar as a **server-side Paper 26.2 plugin** (Java 25). Forge, Fabric and client mods

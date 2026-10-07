@@ -1,5 +1,6 @@
 package dev.the_fireplace.caterpillar.paper.listener;
 
+import dev.the_fireplace.caterpillar.paper.Bedrock;
 import dev.the_fireplace.caterpillar.paper.ResourcePack;
 import dev.the_fireplace.caterpillar.paper.SimplyCaterpillarPlugin;
 import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
@@ -28,6 +29,9 @@ public final class PackListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (Bedrock.isBedrock(player)) {
+            return; // Bedrock (Geyser) players cannot use Java resource packs: they keep the plain blocks
+        }
         // A short delay so the prompt does not get lost among other join messages and packs.
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
@@ -38,7 +42,7 @@ public final class PackListener implements Listener {
 
     @EventHandler
     public void onPackStatus(PlayerResourcePackStatusEvent event) {
-        if (!ResourcePack.PACK_ID.equals(event.getID())) {
+        if (!ResourcePack.PACK_ID.equals(event.getID()) || Bedrock.isBedrock(event.getPlayer())) {
             return;
         }
         switch (event.getStatus()) {

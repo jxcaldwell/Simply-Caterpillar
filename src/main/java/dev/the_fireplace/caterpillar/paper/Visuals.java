@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
@@ -84,6 +85,9 @@ public final class Visuals {
     // ---------------------------------------------------------------- players
 
     public void packLoaded(Player player) {
+        if (Bedrock.isBedrock(player)) {
+            return;
+        }
         packPlayers.add(player.getUniqueId());
         for (Map<String, ItemDisplay> byKey : displays.values()) {
             for (ItemDisplay display : byKey.values()) {
@@ -349,7 +353,8 @@ public final class Visuals {
 
     /** Shows the player barriers (invisible, still solid) instead of the plain blocks, if the caterpillar is near. */
     private void hideBlocks(Machine machine, Player player) {
-        if (!enabled() || !player.getWorld().getUID().equals(machine.world())) {
+        // isConnected: the player can still be "online" for a moment after the connection closed.
+        if (!enabled() || !player.isConnected() || !player.getWorld().getUID().equals(machine.world())) {
             return;
         }
         int range = (player.getClientViewDistance() + 1) * 16;
@@ -361,9 +366,13 @@ public final class Visuals {
             return;
         }
         World world = player.getWorld();
-        List<Pos> footprint = machine.footprint();
-        for (Pos pos : footprint) {
-            player.sendBlockChange(new Location(world, pos.x(), pos.y(), pos.z()), HIDDEN);
+        List<BlockState> hidden = new ArrayList<>();
+        for (Pos pos : machine.footprint()) {
+            BlockState state = world.getBlockAt(pos.x(), pos.y(), pos.z()).getState(false);
+            state.setBlockData(HIDDEN);
+            hidden.add(state);
         }
+        // One batched update (per chunk section) instead of a packet per block.
+        player.sendBlockChanges(hidden);
     }
 }

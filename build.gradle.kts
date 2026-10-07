@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.the_fireplace.caterpillar"
-val baseVersion = "1.0.0"
+val baseVersion = "1.0.1"
 // A release is built from a tag such as v1.0.0 and carries exactly that version. Every other CI build carries the short
 // commit id (SimplyCaterpillar-1.0.0-ab12cd3.jar), so it is always clear which build is installed on a server.
 val commit = System.getenv("GITHUB_SHA")?.take(7)
