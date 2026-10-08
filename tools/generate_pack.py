@@ -4,6 +4,8 @@
 * assets/simplycaterpillar/items/<model>.json: one item definition per original block model, used by the
   plugin's display entities (item_model = simplycaterpillar:<model>).
 * assets/simplycaterpillar/items/part_<id>.json: the inventory icons of the part items.
+* assets/minecraft/blockstates/petrified_oak_slab.json: makes the double petrified oak slab (the "carrier" block the
+  plugin uses under parts whose model is not a full block) invisible.
 * assets/minecraft/items/<block>.json: overrides of the vanilla items the parts are made of (see config.yml
   "blocks:"). A part item carries custom_model_data "simplycaterpillar:<id>" and gets the original icon; every other
   item of that type falls back to the normal vanilla model, so players without the pack see nothing odd.
@@ -69,6 +71,20 @@ for block, (fallback, parts) in by_block.items():
             "fallback": model(fallback),
         }
     })
+
+# The carrier block: a double petrified oak slab (unobtainable in survival, never generated) is drawn invisible, so
+# the parts whose original model is not a full block show only their model. Single slabs keep the vanilla look.
+write(f"assets/{NS}/models/block/invisible.json", {
+    "textures": {"particle": f"{NS}:block/drill_head/frame"},
+    "elements": [],
+})
+write("assets/minecraft/blockstates/petrified_oak_slab.json", {
+    "variants": {
+        "type=bottom": {"model": "minecraft:block/oak_slab"},
+        "type=top": {"model": "minecraft:block/oak_slab_top"},
+        "type=double": {"model": f"{NS}:block/invisible"},
+    }
+})
 
 write("pack.mcmeta", {
     "pack": {

@@ -110,6 +110,15 @@ public final class Builders {
                 && (current.isAir() || (block.isReplaceable() && !block.isLiquid()))) {
             return true;
         }
+        // A sand or gravel floor over a cave is only waiting to fall (the next block update next to it, such as a rail
+        // being laid, drops it) and leave a pit. If the floor fills gaps, replace it before that happens.
+        if (side == ReinforcementGui.Side.FLOOR && settings.replaces(side, ReinforcementGui.Replace.AIR)
+                && current.hasGravity()) {
+            Block below = block.getRelative(BlockFace.DOWN);
+            if (below.getType().isAir() || below.isLiquid() || below.isReplaceable()) {
+                return true;
+            }
+        }
         // "All": anything else, except blocks that hold data (chests, signs, spawners...), which are never touched.
         return settings.replaces(side, ReinforcementGui.Replace.ALL) && !(block.getState(false) instanceof TileState);
     }
@@ -214,6 +223,7 @@ public final class Builders {
                        PartType part) {
         boolean mustBreak = breakFirst && !block.getType().isAir() && !block.isLiquid() && !block.isReplaceable();
         if (!BuildGuard.canBuild(owner, block) || (mustBreak && !BuildGuard.canBreak(owner, block))) {
+            plugin.manager().warnProtected(machine, part, block);
             return;
         }
         if (!plugin.manager().takeConsumption(machine, item)) {

@@ -15,13 +15,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -35,14 +33,14 @@ import org.joml.Vector3f;
  *
  * <p>Each part gets one or more item display entities (some original parts were three or five blocks wide; their
  * side pieces are shown as models only). The displays are invisible to everyone by default and shown only to
- * players who loaded the pack. For those players the plain placeholder blocks are replaced, on their client only, by
- * barrier blocks: invisible, but still solid and clickable. Everyone else, Bedrock players included, keeps seeing the
- * plain blocks.
+ * players who loaded the pack. Most models are full blocks and are drawn slightly larger than a block, so they cover
+ * the plain block underneath completely. Parts whose model is not a full block stand on the carrier block (see
+ * {@link Settings#carrier()}), which the pack draws invisible. No block is ever faked on a client, so breaking,
+ * light and collision all work normally. Everyone without the pack, Bedrock players included, sees the plain blocks.
  */
 public final class Visuals {
 
     private static final String NS = "simplycaterpillar";
-    private static final BlockData HIDDEN = Material.BARRIER.createBlockData();
 
     /**
      * One model at one position. {@code onlyIfFree} marks the side pieces of the originally wider parts (storage
@@ -58,7 +56,7 @@ public final class Visuals {
     /** Slightly larger than a block, so a model always draws over a plain block in the same place (no flicker). */
     private static final float SCALE = 1.002f;
     /** Ticks before a display that vanished may be spawned again, so a half-loaded chunk cannot cause a spawn storm. */
-    private static final int RESPAWN_COOLDOWN = 100;
+    private static final int RESPAWN_COOLDOWN = 40;
 
     private final SimplyCaterpillarPlugin plugin;
     private final Set<UUID> packPlayers = new HashSet<>();
@@ -67,8 +65,6 @@ public final class Visuals {
     private final Map<UUID, Map<String, String>> shownModels = new HashMap<>();
     private final Map<UUID, Integer> shownState = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> lastSpawn = new HashMap<>();
-    /** Caterpillars whose hidden blocks must be re-sent on the next tick (after the server sent the real ones). */
-    private Set<UUID> resendNext = new HashSet<>();
 
     public Visuals(SimplyCaterpillarPlugin plugin) {
         this.plugin = plugin;
@@ -96,55 +92,10 @@ public final class Visuals {
                 }
             }
         }
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            for (Machine machine : plugin.manager().all()) {
-                hideBlocks(machine, player);
-            }
-        });
     }
 
     public void packGone(Player player) {
         packPlayers.remove(player.getUniqueId());
-    }
-
-    /** A pack player received a chunk: hide the placeholder blocks in it again (after the chunk data arrived). */
-    public void chunkSent(Player player, Chunk chunk) {
-        if (!hasPack(player) || !enabled()) {
-            return;
-        }
-        UUID world = chunk.getWorld().getUID();
-        int cx = chunk.getX();
-        int cz = chunk.getZ();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            for (Machine machine : plugin.manager().all()) {
-                if (!machine.world().equals(world)) {
-                    continue;
-                }
-                for (Pos pos : machine.footprint()) {
-                    if (pos.chunkX() == cx && pos.chunkZ() == cz) {
-                        hideBlocks(machine, player);
-                        break;
-                    }
-                }
-            }
-        });
-    }
-
-    // ---------------------------------------------------------------- per tick
-
-    /** Called at the start of every manager tick, before the machines run. */
-    public void beforeTick() {
-        if (resendNext.isEmpty()) {
-            return;
-        }
-        Set<UUID> due = resendNext;
-        resendNext = new HashSet<>();
-        for (UUID id : due) {
-            Machine machine = plugin.manager().get(id);
-            if (machine != null) {
-                hideBlocks(machine);
-            }
-        }
     }
 
     /** Called after a machine ticked; updates its models if something visible changed. */
@@ -158,7 +109,6 @@ public final class Visuals {
             if (sync(machine)) {
                 shownState.put(machine.id(), state);
             }
-            resendNext.add(machine.id());
         }
     }
 
@@ -185,7 +135,9 @@ public final class Visuals {
         Iterator<Map.Entry<String, ItemDisplay>> it = current.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, ItemDisplay> entry = it.next();
-            if (!wanted.containsKey(entry.getKey()) || !entry.getValue().isValid()) {
+            // isDead: the display was removed (e.g. its chunk unloaded). A display in a loaded but not ticking chunk is
+            // not "valid" yet still exists; it must be kept, or it would be re-created over and over.
+            if (!wanted.containsKey(entry.getKey()) || entry.getValue().isDead()) {
                 entry.getValue().remove();
                 it.remove();
                 models.remove(entry.getKey());
@@ -212,6 +164,7 @@ public final class Visuals {
                     spawned.setPersistent(false);
                     spawned.setVisibleByDefault(false);
                     spawned.setTeleportDuration(3);
+                    spawned.setBrightness(brightness(world, machine, element.pos()));
                 });
                 for (UUID viewer : packPlayers) {
                     Player player = Bukkit.getPlayer(viewer);
@@ -232,9 +185,35 @@ public final class Visuals {
                 display.setItemStack(modelItem(element.model()));
                 models.put(entry.getKey(), element.model());
             }
+            Display.Brightness light = brightness(world, machine, element.pos());
+            if (!light.equals(display.getBrightness())) {
+                display.setBrightness(light);
+            }
         }
         return true;
     }
+
+    /**
+     * The light a model should be drawn with. A display inside a solid block would be pitch black, so it takes the
+     * brightest light of the open blocks around it; the head's centre is fully lit while the machine is powered.
+     */
+    private static Display.Brightness brightness(World world, Machine machine, Pos pos) {
+        int blockLight = 0;
+        int skyLight = 0;
+        for (int[] d : NEIGHBOURS) {
+            org.bukkit.block.Block near = world.getBlockAt(pos.x() + d[0], pos.y() + d[1], pos.z() + d[2]);
+            if (!near.getType().isOccluding()) {
+                blockLight = Math.max(blockLight, near.getLightFromBlocks());
+                skyLight = Math.max(skyLight, near.getLightFromSky());
+            }
+        }
+        if (machine.powered() && pos.equals(machine.base().offset(machine.facing(), 1, 0, 0))) {
+            blockLight = 15;
+        }
+        return new Display.Brightness(blockLight, skyLight);
+    }
+
+    private static final int[][] NEIGHBOURS = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
     private static ItemStack modelItem(String model) {
         ItemStack stack = new ItemStack(Material.PAPER);
@@ -338,41 +317,5 @@ public final class Visuals {
         for (UUID id : new ArrayList<>(displays.keySet())) {
             remove(id);
         }
-    }
-
-    // ---------------------------------------------------------------- hidden placeholder blocks
-
-    private void hideBlocks(Machine machine) {
-        for (UUID viewer : packPlayers) {
-            Player player = Bukkit.getPlayer(viewer);
-            if (player != null) {
-                hideBlocks(machine, player);
-            }
-        }
-    }
-
-    /** Shows the player barriers (invisible, still solid) instead of the plain blocks, if the caterpillar is near. */
-    private void hideBlocks(Machine machine, Player player) {
-        // isConnected: the player can still be "online" for a moment after the connection closed.
-        if (!enabled() || !player.isConnected() || !player.getWorld().getUID().equals(machine.world())) {
-            return;
-        }
-        int range = (player.getClientViewDistance() + 1) * 16;
-        Location eye = player.getLocation();
-        Pos base = machine.base();
-        double dx = eye.getX() - base.x();
-        double dz = eye.getZ() - base.z();
-        if (dx * dx + dz * dz > (double) range * range + 64 * 64) {
-            return;
-        }
-        World world = player.getWorld();
-        List<BlockState> hidden = new ArrayList<>();
-        for (Pos pos : machine.footprint()) {
-            BlockState state = world.getBlockAt(pos.x(), pos.y(), pos.z()).getState(false);
-            state.setBlockData(HIDDEN);
-            hidden.add(state);
-        }
-        // One batched update (per chunk section) instead of a packet per block.
-        player.sendBlockChanges(hidden);
     }
 }

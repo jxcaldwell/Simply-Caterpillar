@@ -146,6 +146,7 @@ msg:
   pack:
     prompt: "<gold>Simply Caterpillar</gold> <gray>would like to show caterpillars with their original 3D models. Optional: you can play without it."
   supply:
+    protected: "<yellow>Caterpillar: the <part><yellow> is not allowed to build at <white><x> <y> <z></white> (protected area), so it left that block as it was."
     out: "<yellow>Caterpillar: out of <white><item></white> for the <part><yellow>. Add more to the consumption slots (middle row)."
   no-permission: "<red>You do not have permission to do that."
   # Reasons the machine stopped by itself

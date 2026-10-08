@@ -34,8 +34,9 @@ resource-pack:
   enabled: true
   # Disconnect Java players who decline the pack.
   required: false
-  # Show the original 3D models on caterpillars in the world to players who loaded the pack. With it, those
-  # players break caterpillar parts by sneaking and left-clicking them.
+  # Show the original 3D models on caterpillars in the world to players who loaded the pack. The outer drill bits,
+  # the seat and the transporter cart are then built from double petrified oak slabs, which the pack draws invisible
+  # (players without the pack see oak planks there).
   world-models: true
   # Leave empty to use the pack published with this plugin build on GitHub. To host it yourself, put the
   # direct download link and the SHA-1 of the zip here.

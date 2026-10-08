@@ -77,8 +77,11 @@ Players are offered a resource pack with the original mod's models when they joi
 * part items show their original icons.
 
 Players who decline it, and Bedrock players joining through Geyser, keep seeing the plain blocks; nothing breaks for
-them. Players with the pack see the plain blocks as invisible barriers and break caterpillar parts by **sneaking and
-left-clicking** them.
+them. Everyone breaks and bumps into caterpillar parts the same way.
+
+With world models on, the parts whose original model is not a full block (the outer drill bits, the seat and the
+transporter cart) are made of double petrified oak slabs, which the pack draws invisible; players without the pack see
+oak planks there. Set `resource-pack.world-models: false` to keep the old placeholder blocks.
 
 Every build on GitHub publishes the pack (`SimplyCaterpillar-pack.zip`) as a pre-release next to the jar, and the jar
 knows the link and checksum of its own pack, so nothing needs configuring. Settings are under `resource-pack:` in

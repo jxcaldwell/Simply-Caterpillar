@@ -111,6 +111,22 @@ public final class Settings {
         unbreakable = blocked;
     }
 
+    /**
+     * True when caterpillars are drawn with the original 3D models for players who have the resource pack. Parts whose
+     * model is not a full block (the outer drill bits, the seat, the transporter cart) then use the carrier block, which
+     * the pack makes invisible, so only the model is seen.
+     */
+    public boolean useCarriers() {
+        return packEnabled && worldModels;
+    }
+
+    /** The block the pack makes invisible: a double petrified oak slab (not obtainable in survival, never generated). */
+    public static org.bukkit.block.data.BlockData carrier() {
+        org.bukkit.block.data.type.Slab slab = (org.bukkit.block.data.type.Slab) Material.PETRIFIED_OAK_SLAB.createBlockData();
+        slab.setType(org.bukkit.block.data.type.Slab.Type.DOUBLE);
+        return slab;
+    }
+
     /** The block that represents a part in the world and as an item. */
     public Material partMaterial(PartType type) {
         return switch (type) {

@@ -183,12 +183,56 @@ public final class PaperEnv implements Env {
         if (world == null) {
             return;
         }
-        Material material = switch (cell.role()) {
-            case BASE -> settings().headBase;
-            case BIT_CENTER -> settings().headBitCenter;
-            case BIT_EDGE -> settings().headBit;
+        block(world, cell.pos()).setBlockData(cellData(machine, cell.role()), false);
+    }
+
+    /** What a head cell is made of. The centre glows while the machine is powered. */
+    public BlockData cellData(Machine machine, HeadCell.Role role) {
+        return switch (role) {
+            case BASE -> data(settings().headBase, machine.facing());
+            case BIT_CENTER -> data(machine.powered() ? settings().headBitCenterActive : settings().headBitCenter,
+                    machine.facing());
+            case BIT_EDGE -> settings().useCarriers() ? Settings.carrier() : data(settings().headBit, machine.facing());
         };
-        block(world, cell.pos()).setBlockData(data(material, machine.facing()), false);
+    }
+
+    /** What a segment is made of. */
+    public BlockData segmentData(Machine machine, SegmentKind kind) {
+        if (kind == SegmentKind.SEAT && settings().useCarriers()) {
+            return Settings.carrier();
+        }
+        return data(settings().partMaterial(PartType.forSegment(kind)), machine.facing());
+    }
+
+    /** What a transporter's cart block is made of. */
+    public BlockData cartData() {
+        return settings().useCarriers() ? Settings.carrier() : settings().transporterCart.createBlockData();
+    }
+
+    /**
+     * Puts the right block back wherever a caterpillar block differs from what it should be (after a configuration
+     * change, or for caterpillars built by an older version).
+     */
+    public void refreshBlocks(Machine machine) {
+        World world = world(machine);
+        if (world == null) {
+            return;
+        }
+        for (HeadCell cell : machine.headCells()) {
+            fix(block(world, cell.pos()), cellData(machine, cell.role()));
+        }
+        for (Machine.Segment segment : machine.segments()) {
+            fix(block(world, segment.pos()), segmentData(machine, segment.kind()));
+            if (segment.cart()) {
+                fix(block(world, segment.cartPos()), cartData());
+            }
+        }
+    }
+
+    private static void fix(Block block, BlockData wanted) {
+        if (block.getType() != wanted.getMaterial()) {
+            block.setBlockData(wanted, false);
+        }
     }
 
     @Override
@@ -197,8 +241,7 @@ public final class PaperEnv implements Env {
         if (world == null) {
             return;
         }
-        Material material = settings().partMaterial(PartType.forSegment(kind));
-        block(world, pos).setBlockData(data(material, machine.facing()), false);
+        block(world, pos).setBlockData(segmentData(machine, kind), false);
     }
 
     @Override
@@ -279,12 +322,10 @@ public final class PaperEnv implements Env {
         if (world == null) {
             return;
         }
+        // The centre glows for as long as the machine is powered, not just while it cuts, so it does not flicker on
+        // every step. (A redstone lamp switches itself off without power, so the lit look is a different block.)
         Block center = block(world, machine.base().offset(machine.facing(), 1, 0, 0));
-        // A redstone lamp switches itself off again without power, so the working look is a different block.
-        Material wanted = drilling ? settings().headBitCenterActive : settings().headBitCenter;
-        if (center.getType() != wanted) {
-            center.setBlockData(data(wanted, machine.facing()), false);
-        }
+        fix(center, cellData(machine, HeadCell.Role.BIT_CENTER));
     }
 
     // ---------------------------------------------------------------- feedback

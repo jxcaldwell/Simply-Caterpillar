@@ -70,6 +70,8 @@ public final class CaterpillarManager {
     private final Map<BlockKey, UUID> occupancy = new HashMap<>();
     private final Map<UUID, List<BlockKey>> keysByMachine = new HashMap<>();
     private final Map<UUID, Integer> seenVersion = new HashMap<>();
+    /** Machines whose blocks were checked against the current settings since they (or the settings) were loaded. */
+    private final java.util.Set<UUID> blocksChecked = new java.util.HashSet<>();
     /** Tick of the last "out of supply" message, per caterpillar and item. */
     private final Map<String, Integer> lastWarning = new HashMap<>();
     /** Saved machines that could not be restored yet (their world is not loaded). Kept so they are never lost. */
@@ -170,6 +172,7 @@ public final class CaterpillarManager {
 
     /** Applies configuration changes (tunables) to every running machine. */
     public void applySettings() {
+        blocksChecked.clear();
         Params params = plugin.settings().params();
         for (Machine machine : machines.values()) {
             machine.setParams(params);
@@ -179,7 +182,6 @@ public final class CaterpillarManager {
     private void tickAll() {
         tickCount++;
         Env env = plugin.env();
-        visuals.beforeTick();
 
         for (Machine machine : new ArrayList<>(machines.values())) {
             try {
@@ -200,6 +202,10 @@ public final class CaterpillarManager {
             if (seen == null || seen != machine.layoutVersion()) {
                 reindex(machine);
                 dirty = true;
+            }
+            if (!blocksChecked.contains(machine.id()) && env.areaLoaded(machine)) {
+                plugin.env().refreshBlocks(machine);
+                blocksChecked.add(machine.id());
             }
             try {
                 visuals.afterTick(machine, tickCount % 20 == 0);
@@ -284,7 +290,7 @@ public final class CaterpillarManager {
             }
             Block block = world.getBlockAt(below.x(), below.y(), below.z());
             data.setPreviousBlock(block.getBlockData().getAsString());
-            block.setBlockData(plugin.settings().transporterCart.createBlockData(), false);
+            block.setBlockData(plugin.env().cartData(), false);
             machine.setCart(segment, true);
             dirty = true;
         }
@@ -349,7 +355,7 @@ public final class CaterpillarManager {
         String coveredNow = target.getBlockData().getAsString();
         restoreBlock(world, from, data.previousBlock());
         data.setPreviousBlock(coveredNow);
-        target.setBlockData(plugin.settings().transporterCart.createBlockData(), false);
+        target.setBlockData(plugin.env().cartData(), false);
         dirty = true;
     }
 
@@ -630,6 +636,26 @@ public final class CaterpillarManager {
                             net.kyori.adventure.text.Component.translatable(item.translationKey())),
                     net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("part",
                             plugin.lang().item("item." + part.id + ".name"))));
+        }
+    }
+
+    /** Tells the owner that a protection plugin stopped a part from building (at most once a minute per part). */
+    public void warnProtected(Machine machine, PartType part, Block block) {
+        int interval = Math.max(1, plugin.settings().supplyWarningSeconds) * 20;
+        String key = machine.id() + ":protected:" + part.id;
+        Integer last = lastWarning.get(key);
+        if (plugin.settings().supplyWarningSeconds <= 0 || (last != null && tickCount - last < interval)) {
+            return;
+        }
+        lastWarning.put(key, tickCount);
+        Player owner = Bukkit.getPlayer(machine.owner());
+        if (owner != null) {
+            owner.sendMessage(plugin.lang().get("msg.supply.protected",
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("part",
+                            plugin.lang().item("item." + part.id + ".name")),
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed("x", String.valueOf(block.getX())),
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed("y", String.valueOf(block.getY())),
+                    net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed("z", String.valueOf(block.getZ()))));
         }
     }
 

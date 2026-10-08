@@ -4,16 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [1.0.1] - 2026-10-06
+## [1.0.1] - 2026-10-07
 
 ### Fixed
 
+- Caterpillar parts can be broken normally again by players with the resource pack (the pack used to make them look
+  like barriers to the client, which cannot be mined).
+- The drill head no longer flashes its plain blocks on every step, and its centre now glows (and lights up the tunnel)
+  for as long as the drill is powered.
+- Caterpillars no longer turn invisible for players with the pack after walking away and coming back; the models are
+  re-created reliably when their chunks load again.
+- The reinforcement builder replaces a sand or gravel floor that is over a cave when it fills floor gaps, so the floor
+  can no longer fall away into a pit later. The owner is now told when a protected area stops it from building.
 - Bedrock players joining through Geyser/Floodgate are no longer offered the Java resource pack or sent the 3D-model
-  view of caterpillars (display entities and client-side block changes they cannot use); they always see the plain
-  blocks. This is the most likely cause of the disconnects seen with Bedrock players.
-- No more packets are sent to a player whose connection has just closed (the burst of `ClosedChannelException`
-  warnings in the log after a disconnect), and the hidden blocks of a caterpillar are sent as one batched update
-  instead of one packet per block.
+  view of caterpillars; they always see the plain blocks. This is the most likely cause of the disconnects seen with
+  Bedrock players.
+- No more packets are sent to a player whose connection has just closed.
+
+### Changed
+
+- How the models are shown: most models now cover the plain block completely; the parts whose original model is not
+  a full block (outer drill bits, seat, transporter cart) are built from double petrified oak slabs, which the pack draws
+  invisible. Players without the pack see oak planks for those parts. `resource-pack.world-models: false` keeps the
+  old blocks.
 
 ## [1.0.0] - 2026-10-04
 
